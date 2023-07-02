@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import cv2
 import torch
 from torch.autograd import Variable
 
@@ -8,50 +9,22 @@ from os import path
 
 
 
+img_width = 32
+num_input_components = img_width*img_width*3
+num_output_components = 1
 
-num_components = 1
-num_epochs = 1000
-
-
-
-def xor_function(in_a, in_b):
-
-	out = np.zeros([num_components], np.float32)
-
-	if in_a == 0 and in_b == 0:
-		out[0] = 0
-	elif in_a == 0 and in_b == 1:
-		out[0] = 1
-	elif in_a == 1 and in_b == 0:
-		out[0] = 1
-	elif in_a == 1 and in_b == 1:
-		out[0] = 0
-
-	return out.T;
-
-
-
-
-def ground_truth(batch):
-	
-	truth = np.zeros([batch.shape[0], num_components], np.float32);
-	
-	for i in range(batch.shape[0]):
-		a = batch[i, 0:num_components]
-		b = batch[i, num_components:num_components*2]
-		truth[i, :] = xor_function(a,b);
-
-	return truth;
+num_epochs = 10
+cut_off = 0.0001
 
 
 
 class Net(torch.nn.Module):
 	def __init__(self):
 		super(Net, self).__init__()
-		self.hidden1 = torch.nn.Linear(num_components*2, 32*num_components)
-		self.hidden2 = torch.nn.Linear(32*num_components, 16*num_components) 
-		self.hidden3 = torch.nn.Linear(16*num_components, 8*num_components)
-		self.predict = torch.nn.Linear(8*num_components, num_components)
+		self.hidden1 = torch.nn.Linear(num_input_components, 32)
+		self.hidden2 = torch.nn.Linear(32, 16) 
+		self.hidden3 = torch.nn.Linear(16, 8)
+		self.predict = torch.nn.Linear(8, num_output_components)
 
 	def forward(self, x):
 		x = torch.tanh(self.hidden1(x))		
@@ -63,111 +36,175 @@ class Net(torch.nn.Module):
 
 
 
-
 net = Net()
 
 
-
-
-
-
-
-
-if False: #path.exists('weights_' + str(num_components) + '_' + str(num_epochs) + '.pth'):
-	net.load_state_dict(torch.load('weights_' + str(num_components) + '_' + str(num_epochs) + '.pth'))
+if path.exists('weights_' + str(num_input_components) + '_' + str(num_epochs) + '.pth'):
+	net.load_state_dict(torch.load('weights_' + str(num_input_components) + '_' + str(num_epochs) + '.pth'))
 	print("loaded file successfully")
 else:
 	print("training...")
 
+
+
+
+
+	cat_train_files = []
+
+	path = 'training_set\\cats\\'
+	filenames = next(os.walk(path))[2]
+
+	for f in filenames:
+
+		print(path + f)
+		img = cv2.imread(path + f).astype(np.float32)
+		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+		cat_train_files.append(np.asarray(res).flatten())
+
+
+	dog_train_files = []
+
+	path = 'training_set\\dogs\\'
+	filenames = next(os.walk(path))[2]
+
+	for f in filenames:
+
+		print(path + f)
+		img = cv2.imread(path + f).astype(np.float32)
+		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+		dog_train_files.append(np.asarray(res).flatten())
+
+
+
+
 	optimizer = torch.optim.Adam(net.parameters(), lr=0.0005)
 	loss_func = torch.nn.MSELoss()
 
-	batch = torch.zeros(1, 2, dtype=torch.float32)
+
 
 	for epoch in range(num_epochs):
 
-		batch[0][0] = 0;
-		batch[0][1] = 0;
+		loss = []
 
-		gt = np.zeros(1, np.float32)
+		for img in cat_train_files:
 
-		x = Variable(batch)
-		y = Variable(torch.from_numpy(gt))
+			batch = torch.from_numpy(img)
 
-		prediction = net(x)	 
-		loss = loss_func(prediction, y)
+			ground_truth = np.ones(1, np.float32)
 
-		if epoch % 10 == 0:
-			print(epoch, loss)
+			x = Variable(batch)
+			y = Variable(torch.from_numpy(ground_truth))
+
+			prediction = net(x)	 
+			loss = loss_func(prediction, y)
+
+			optimizer.zero_grad()	 # clear gradients for next train
+			loss.backward()		 # backpropagation, compute gradients
+			optimizer.step()		# apply gradients
+
+			#print(epoch, loss)
 	
-		optimizer.zero_grad()	 # clear gradients for next train
-		loss.backward()		 # backpropagation, compute gradients
-		optimizer.step()		# apply gradients
+			if loss.detach().numpy() < cut_off:
+				break
 
 
 
-		batch[0][0] = 0;
-		batch[0][1] = 1;
 
-		gt = np.ones(1, np.float32)
 
-		x = Variable(batch)
-		y = Variable(torch.from_numpy(gt))
+		for img in dog_train_files:
 
-		prediction = net(x)	 
-		loss = loss_func(prediction, y)
+			batch = torch.from_numpy(img)
 
-		if epoch % 10 == 0:
-			print(epoch, loss)
+			ground_truth = np.zeros(1, np.float32)
+
+			x = Variable(batch)
+			y = Variable(torch.from_numpy(ground_truth))
+
+			prediction = net(x)	 
+			loss = loss_func(prediction, y)
+
+			optimizer.zero_grad()	 # clear gradients for next train
+			loss.backward()		 # backpropagation, compute gradients
+			optimizer.step()		# apply gradients
+
+			#print(epoch, loss)
+
+			
+			if loss.detach().numpy() < cut_off:
+				break
+
+
+	torch.save(net.state_dict(), 'weights_' + str(num_input_components) + '_' + str(num_epochs) + '.pth')
+
+
+
+
+
+
+path = 'test_set\\cats\\'
+filenames = next(os.walk(path))[2]
+
+cat_count = 0
+total_count = 0
+
+for f in filenames:
+
+#	print(path + f)
+	img = cv2.imread(path + f).astype(np.float32)
+	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 	
-		optimizer.zero_grad()	 # clear gradients for next train
-		loss.backward()		 # backpropagation, compute gradients
-		optimizer.step()		# apply gradients
+	batch = torch.from_numpy(np.asarray(res).flatten())
+
+	prediction = net(Variable(batch))
+
+	if prediction > 0.5:
+		cat_count = cat_count + 1
+
+	total_count = total_count + 1
+#	print(batch)
+	print(prediction)
+
+print(cat_count / total_count)
+print(total_count)
 
 
-		batch[0][0] = 1;
-		batch[0][1] = 0;
 
-		gt = np.ones(1, np.float32)
 
-		x = Variable(batch)
-		y = Variable(torch.from_numpy(gt))
 
-		prediction = net(x)	 
-		loss = loss_func(prediction, y)
 
-		if epoch % 10 == 0:
-			print(epoch, loss)
+path = 'test_set\\dogs\\'
+filenames = next(os.walk(path))[2]
+
+dog_count = 0
+total_count = 0
+
+for f in filenames:
+
+#	print(path + f)
+	img = cv2.imread(path + f).astype(np.float32)
+	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 	
-		optimizer.zero_grad()	 # clear gradients for next train
-		loss.backward()		 # backpropagation, compute gradients
-		optimizer.step()		# apply gradients
-		
-		
-		batch[0][0] = 1;
-		batch[0][1] = 1;
+	batch = torch.from_numpy(np.asarray(res).flatten())
 
-		gt = np.zeros(1, np.float32)
+	prediction = net(Variable(batch))
 
-		x = Variable(batch)
-		y = Variable(torch.from_numpy(gt))
+	if prediction < 0.5:
+		dog_count = dog_count + 1
 
-		prediction = net(x)	 
-		loss = loss_func(prediction, y)
+	total_count = total_count + 1
+	#	print(batch)
+	print(prediction)
 
-		if epoch % 10 == 0:
-			print(epoch, loss)
-	
-		optimizer.zero_grad()	 # clear gradients for next train
-		loss.backward()		 # backpropagation, compute gradients
-		optimizer.step()		# apply gradients
-
-
-	#torch.save(net.state_dict(), 'weights_' + str(num_components) + '_' + str(num_epochs) + '.pth')
+print(dog_count / total_count)
+print(total_count)
 
 
 
 
+
+
+
+"""
 batch = torch.zeros(4, 2, dtype=torch.float32)
 
 batch[0][0] = 0;
@@ -186,4 +223,4 @@ print(gt)
 print("\n")
 print(prediction)
 
-
+"""
