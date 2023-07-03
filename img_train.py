@@ -10,12 +10,11 @@ from os import path
 
 
 
-img_width = 256
+img_width = 32
 num_input_components = img_width*img_width*3
 num_output_components = 1
 
-num_epochs = 100
-cut_off = 0.0001
+num_epochs = 1000
 learning_rate = 0.0001
 
 
@@ -37,10 +36,15 @@ class Net(torch.nn.Module):
 
 
 
+class float_image:
+	def __init__(self, img):
+		self.img = img
+
+
 class image_type:
-	def __init__(self, img_type, image):
+	def __init__(self, img_type, float_img):
 		self.img_type = img_type
-		self.image = image
+		self.float_img = float_img
 
 
 
@@ -77,8 +81,8 @@ else:
 
 		file_count = file_count + 1
 
-		if file_count >= 100:
-			break
+		#if file_count >= 100:
+		#	break
 
 
 
@@ -96,42 +100,40 @@ else:
 		
 		file_count = file_count + 1
 
-		if file_count >= 100:
-			break
+		#if file_count >= 100:
+		#	break
 
 
 
 
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
+	
+	random.shuffle(all_train_files)
+	
+	batch = np.zeros((len(all_train_files), num_input_components), dtype=np.float32)
+	ground_truth = np.zeros((len(all_train_files), 1), dtype=np.float32)
 
+	count = 0
 
+	for i in all_train_files:
+		batch[count] = i.float_img
+		ground_truth[count] = i.img_type
+		count = count + 1
 
 	for epoch in range(num_epochs):
 
-		random.shuffle(all_train_files)
+		x = Variable(torch.from_numpy(batch))
+		y = Variable(torch.from_numpy(ground_truth))
 
-		for i in all_train_files:
+		prediction = net(x)	 
+		loss = loss_func(prediction, y)
 
-			batch = torch.from_numpy(i.image)
-			ground_truth = np.zeros(1, np.float32)
-			ground_truth[0] = i.img_type
+		print(epoch, loss)
 
-			x = Variable(batch)
-			y = Variable(torch.from_numpy(ground_truth))
-
-			prediction = net(x)	 
-			loss = loss_func(prediction, y)
-
-			print(epoch, loss)
-
-			optimizer.zero_grad()	 # clear gradients for next train
-			loss.backward()		 # backpropagation, compute gradients
-			optimizer.step()		# apply gradients
-
-			if loss.detach().numpy() < cut_off:
-				break
-
+		optimizer.zero_grad()	 # clear gradients for next train
+		loss.backward()		 # backpropagation, compute gradients
+		optimizer.step()		# apply gradients
 
 
 
@@ -193,8 +195,8 @@ for f in filenames:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
-	#	print(batch)
-	#print(prediction)
+#	print(batch)
+#	print(prediction)
 
 print(dog_count / total_count)
 print(total_count)
