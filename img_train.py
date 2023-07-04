@@ -10,12 +10,12 @@ from os import path
 
 
 
-img_width = 128
+img_width = 32
 num_input_components = img_width*img_width*3
 num_output_components = 1
 
 num_epochs = 100
-learning_rate = 0.0001
+learning_rate = 0.00001
 
 
 
@@ -23,10 +23,10 @@ class Net(torch.nn.Module):
 
 	def __init__(self):
 		super(Net, self).__init__()
-		self.hidden1 = torch.nn.Linear(num_input_components, 256)
-		self.hidden2 = torch.nn.Linear(256, 128) 
-		self.hidden3 = torch.nn.Linear(128, 32)
-		self.predict = torch.nn.Linear(32, num_output_components)
+		self.hidden1 = torch.nn.Linear(num_input_components, 8192)
+		self.hidden2 = torch.nn.Linear(8192, 1024) 
+		self.hidden3 = torch.nn.Linear(1024, 128)
+		self.predict = torch.nn.Linear(128, num_output_components)
 
 	def forward(self, x):
 		x = torch.tanh(self.hidden1(x))		
@@ -101,17 +101,17 @@ else:
 	batch = np.zeros((len(all_train_files), num_input_components), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), 1), dtype=np.float32)
 
+	random.shuffle(all_train_files)
+
+	count = 0
+
+	for i in all_train_files:
+
+		batch[count] = i.float_img
+		ground_truth[count] = i.img_type
+		count = count + 1
+
 	for epoch in range(num_epochs):
-
-		random.shuffle(all_train_files)
-
-		count = 0
-
-		for i in all_train_files:
-
-			batch[count] = i.float_img
-			ground_truth[count] = i.img_type
-			count = count + 1
 
 		x = Variable(torch.from_numpy(batch))
 		y = Variable(torch.from_numpy(ground_truth))
