@@ -10,16 +10,17 @@ from os import path
 
 
 
-img_width = 32
+img_width = 128
 num_input_components = img_width*img_width*3
 num_output_components = 1
 
-num_epochs = 1000
+num_epochs = 100
 learning_rate = 0.0001
 
 
 
 class Net(torch.nn.Module):
+
 	def __init__(self):
 		super(Net, self).__init__()
 		self.hidden1 = torch.nn.Linear(num_input_components, 256)
@@ -34,14 +35,13 @@ class Net(torch.nn.Module):
 		x = self.predict(x)    # linear output
 		return x
 
-
-
 class float_image:
+
 	def __init__(self, img):
 		self.img = img
 
-
 class image_type:
+
 	def __init__(self, img_type, float_img):
 		self.img_type = img_type
 		self.float_img = float_img
@@ -67,7 +67,6 @@ else:
 
 
 
-	file_count = 0
 	path = 'training_set\\cats\\'
 	filenames = next(os.walk(path))[2]
 
@@ -76,17 +75,9 @@ else:
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = np.asarray(res).flatten()
+		flat_file = np.asarray(res).flatten() / 255.0
 		all_train_files.append(image_type(0, flat_file))
 
-		file_count = file_count + 1
-
-		#if file_count >= 100:
-		#	break
-
-
-
-	file_count = 0
 	path = 'training_set\\dogs\\'
 	filenames = next(os.walk(path))[2]
 
@@ -95,33 +86,32 @@ else:
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = np.asarray(res).flatten()
+		flat_file = np.asarray(res).flatten() / 255.0
 		all_train_files.append(image_type(1, flat_file))
-		
-		file_count = file_count + 1
-
-		#if file_count >= 100:
-		#	break
 
 
 
 
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
-	
-	random.shuffle(all_train_files)
+
+
+
 	
 	batch = np.zeros((len(all_train_files), num_input_components), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), 1), dtype=np.float32)
 
-	count = 0
-
-	for i in all_train_files:
-		batch[count] = i.float_img
-		ground_truth[count] = i.img_type
-		count = count + 1
-
 	for epoch in range(num_epochs):
+
+		random.shuffle(all_train_files)
+
+		count = 0
+
+		for i in all_train_files:
+
+			batch[count] = i.float_img
+			ground_truth[count] = i.img_type
+			count = count + 1
 
 		x = Variable(torch.from_numpy(batch))
 		y = Variable(torch.from_numpy(ground_truth))
@@ -141,9 +131,6 @@ else:
 
 
 
-
-
-
 path = 'test_set\\cats\\'
 filenames = next(os.walk(path))[2]
 
@@ -155,8 +142,9 @@ for f in filenames:
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	
-	batch = torch.from_numpy(np.asarray(res).flatten())
+	flat_file = np.asarray(res).flatten() / 255.0
+
+	batch = torch.from_numpy(flat_file)
 
 	prediction = net(Variable(batch))
 
@@ -172,9 +160,6 @@ print(total_count)
 
 
 
-
-
-
 path = 'test_set\\dogs\\'
 filenames = next(os.walk(path))[2]
 
@@ -186,8 +171,9 @@ for f in filenames:
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	
-	batch = torch.from_numpy(np.asarray(res).flatten())
+	flat_file = np.asarray(res).	flatten() / 255.0
+
+	batch = torch.from_numpy(flat_file)
 
 	prediction = net(Variable(batch))
 
@@ -200,30 +186,3 @@ for f in filenames:
 
 print(dog_count / total_count)
 print(total_count)
-
-
-
-
-
-
-
-"""
-batch = torch.zeros(4, 2, dtype=torch.float32)
-
-batch[0][0] = 0;
-batch[0][1] = 0;
-batch[1][0] = 0;
-batch[1][1] = 1;
-batch[2][0] = 1;
-batch[2][1] = 0;
-batch[3][0] = 1;
-batch[3][1] = 1;
-
-gt = ground_truth(batch.numpy())
-prediction = net(batch).detach().numpy()
-
-print(gt)
-print("\n")
-print(prediction)
-
-"""
