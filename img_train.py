@@ -11,7 +11,7 @@ from os import path
 
 
 img_width = 32
-num_input_components = img_width*img_width*3
+num_input_components = img_width*img_width
 num_output_components = 1
 
 num_epochs = 100
@@ -74,6 +74,7 @@ else:
 
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
+		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 		flat_file = np.asarray(res).flatten() / 255.0
 		all_train_files.append(image_type(0, flat_file))
@@ -85,6 +86,7 @@ else:
 
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
+		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 		flat_file = np.asarray(res).flatten() / 255.0
 		all_train_files.append(image_type(1, flat_file))
@@ -141,8 +143,10 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
+	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 	flat_file = np.asarray(res).flatten() / 255.0
+		
 
 	batch = torch.from_numpy(flat_file)
 
@@ -170,8 +174,9 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
+	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	flat_file = np.asarray(res).	flatten() / 255.0
+	flat_file = np.asarray(res).flatten() / 255.0
 
 	batch = torch.from_numpy(flat_file)
 
