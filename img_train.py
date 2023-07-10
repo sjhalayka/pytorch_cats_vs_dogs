@@ -18,16 +18,48 @@ num_channels = 3
 num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 100
+num_epochs = 1000
 learning_rate = 0.001
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-class Net(nn.Module):
 
-	def __init__(self, num_channels, num_output_components, all_train_files_len):
+
+class Net(torch.nn.Module):
+    def __init__(self, num_channels, num_output_components, all_train_files_len):
+        super().__init__()
+        self.model = torch.nn.Sequential(
+            #Input = 3 x 32 x 32, Output = 32 x 32 x 32
+            torch.nn.Conv2d(in_channels = num_channels, out_channels = 32, kernel_size = 3, padding = 1), 
+            torch.nn.ReLU(),
+            #Input = 32 x 32 x 32, Output = 32 x 16 x 16
+            torch.nn.MaxPool2d(kernel_size=2),
+  
+            #Input = 32 x 16 x 16, Output = 64 x 16 x 16
+            torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1),
+            torch.nn.ReLU(),
+            #Input = 64 x 16 x 16, Output = 64 x 8 x 8
+            torch.nn.MaxPool2d(kernel_size=2),
+              
+            #Input = 64 x 8 x 8, Output = 64 x 8 x 8
+            torch.nn.Conv2d(in_channels = 64, out_channels = 64, kernel_size = 3, padding = 1),
+            torch.nn.ReLU(),
+            #Input = 64 x 8 x 8, Output = 64 x 4 x 4
+            torch.nn.MaxPool2d(kernel_size=2),
+  
+            torch.nn.Flatten(),
+            torch.nn.Linear(64*4*4, all_train_files_len),
+            torch.nn.ReLU(),
+            torch.nn.Linear(all_train_files_len, num_output_components)
+        )
+  
+    def forward(self, x):
+        return self.model(x)
+
+
+"""	
+def __init__(self, num_channels, num_output_components, all_train_files_len):
 		# call the parent constructor
 		super(Net, self).__init__()
 		self.conv1 = nn.Conv2d(num_channels, img_width, kernel_size=(3,3), stride=1, padding=1)
@@ -62,7 +94,7 @@ class Net(nn.Module):
 		# input 512, output 10
 		x = self.fc4(x)
 		return x
-
+"""
 
 """
 	def __init__(self):
@@ -153,39 +185,35 @@ else:
 
 
 	net = Net(num_channels, num_output_components, len(all_train_files))
-
-
-
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
 
 
-
-	
 	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)
-
-	random.shuffle(all_train_files)
-
-	count = 0
-
-	for i in all_train_files:
-
-		batch[count] = i.float_img
-		
-		if i.img_type == 0:
-			ground_truth[count][0] = 1
-			ground_truth[count][1] = 0
-		elif i.img_type == 1:
-			ground_truth[count][0] = 0
-			ground_truth[count][1] = 1
-
-		count = count + 1
-	
-	x = Variable(torch.from_numpy(batch))
-	y = Variable(torch.from_numpy(ground_truth))
 	
 	for epoch in range(num_epochs):
+		
+		random.shuffle(all_train_files)
+
+		count = 0
+
+		for i in all_train_files:
+
+			batch[count] = i.float_img
+		
+			if i.img_type == 0: # cat
+				ground_truth[count][0] = 1
+				ground_truth[count][1] = 0
+			elif i.img_type == 1: # dog
+				ground_truth[count][0] = 0
+				ground_truth[count][1] = 1
+
+			count = count + 1
+	
+		x = Variable(torch.from_numpy(batch))
+		y = Variable(torch.from_numpy(ground_truth))
+
 
 		prediction = net(x)	 
 		loss = loss_func(prediction, y)
