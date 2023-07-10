@@ -3,7 +3,9 @@ import math
 import cv2
 import random
 import torch
+from torch import flatten
 from torch.autograd import Variable
+import torch.nn as nn
 
 import os.path
 from os import path
@@ -11,16 +13,58 @@ from os import path
 
 
 img_width = 32
-num_input_components = img_width*img_width
-num_output_components = 1
+num_channels = 3
+
+num_input_components = img_width*img_width*num_channels
+num_output_components = 2
 
 num_epochs = 100
-learning_rate = 0.00001
+learning_rate = 0.001
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class Net(torch.nn.Module):
 
+class Net(nn.Module):
+
+	def __init__(self, num_channels, num_output_components, all_train_files_len):
+		# call the parent constructor
+		super(Net, self).__init__()
+		self.conv1 = nn.Conv2d(num_channels, img_width, kernel_size=(3,3), stride=1, padding=1)
+		self.act1 = nn.ReLU()
+		self.drop1 = nn.Dropout(0.3)
+ 
+		self.conv2 = nn.Conv2d(img_width, img_width, kernel_size=(3,3), stride=1, padding=1)
+		self.act2 = nn.ReLU()
+		self.pool2 = nn.MaxPool2d(kernel_size=(2, 2))
+ 
+		self.flat = nn.Flatten()
+ 
+		self.fc3 = nn.Linear(8*img_width*img_width, 512)
+		self.act3 = nn.ReLU()
+		self.drop3 = nn.Dropout(0.5)
+ 
+		self.fc4 = nn.Linear(512, num_output_components)
+
+	def forward(self, x):
+		# input 3x32x32, output 32x32x32
+		x = self.act1(self.conv1(x))
+		x = self.drop1(x)
+		# input 32x32x32, output 32x32x32
+		x = self.act2(self.conv2(x))
+		# input 32x32x32, output 32x16x16
+		x = self.pool2(x)
+		# input 32x16x16, output 8192
+		x = self.flat(x)
+		# input 8192, output 512
+		x = self.act3(self.fc3(x))
+		x = self.drop3(x)
+		# input 512, output 10
+		x = self.fc4(x)
+		return x
+
+
+"""
 	def __init__(self):
 		super(Net, self).__init__()
 		self.hidden1 = torch.nn.Linear(num_input_components, 8192)
@@ -34,6 +78,9 @@ class Net(torch.nn.Module):
 		x = torch.tanh(self.hidden3(x))
 		x = self.predict(x)    # linear output
 		return x
+"""
+
+
 
 class float_image:
 
@@ -49,10 +96,6 @@ class image_type:
 
 
 
-
-net = Net()
-
-
 if False: #path.exists('weights_' + str(num_input_components) + '_' + str(num_epochs) + '.pth'):
 	net.load_state_dict(torch.load('weights_' + str(num_input_components) + '_' + str(num_epochs) + '.pth'))
 	print("loaded file successfully")
@@ -65,32 +108,51 @@ else:
 
 	all_train_files = []
 
-
+	file_count = 0
 
 	path = 'training_set\\cats\\'
 	filenames = next(os.walk(path))[2]
 
 	for f in filenames:
 
+		file_count = file_count + 1
+		if file_count >= 10000:
+			break;
+
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
-		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = np.asarray(res).flatten() / 255.0
+		flat_file = res / 255.0
+		flat_file = np.transpose(flat_file, (2, 0, 1))
 		all_train_files.append(image_type(0, flat_file))
+
+
+	file_count = 0
 
 	path = 'training_set\\dogs\\'
 	filenames = next(os.walk(path))[2]
 
 	for f in filenames:
 
+		file_count = file_count + 1
+		if file_count >= 10000:
+			break;
+
+
 		print(path + f)
 		img = cv2.imread(path + f).astype(np.float32)
-		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = np.asarray(res).flatten() / 255.0
+		flat_file = res / 255.0
+		flat_file = np.transpose(flat_file, (2, 0, 1))
 		all_train_files.append(image_type(1, flat_file))
 
+
+
+
+	
+
+
+	net = Net(num_channels, num_output_components, len(all_train_files))
 
 
 
@@ -100,8 +162,8 @@ else:
 
 
 	
-	batch = np.zeros((len(all_train_files), num_input_components), dtype=np.float32)
-	ground_truth = np.zeros((len(all_train_files), 1), dtype=np.float32)
+	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
+	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)
 
 	random.shuffle(all_train_files)
 
@@ -110,13 +172,20 @@ else:
 	for i in all_train_files:
 
 		batch[count] = i.float_img
-		ground_truth[count] = i.img_type
+		
+		if i.img_type == 0:
+			ground_truth[count][0] = 1
+			ground_truth[count][1] = 0
+		elif i.img_type == 1:
+			ground_truth[count][0] = 0
+			ground_truth[count][1] = 1
+
 		count = count + 1
-
+	
+	x = Variable(torch.from_numpy(batch))
+	y = Variable(torch.from_numpy(ground_truth))
+	
 	for epoch in range(num_epochs):
-
-		x = Variable(torch.from_numpy(batch))
-		y = Variable(torch.from_numpy(ground_truth))
 
 		prediction = net(x)	 
 		loss = loss_func(prediction, y)
@@ -143,24 +212,26 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
-	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	flat_file = np.asarray(res).flatten() / 255.0
-		
+	flat_file = res / 255.0
+	flat_file = np.transpose(flat_file, (2, 0, 1))
 
-	batch = torch.from_numpy(flat_file)
+	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+	batch[0] = torch.from_numpy(flat_file)
 
 	prediction = net(Variable(batch))
 
-	if prediction < 0.5:
+	if prediction[0][0] > prediction[0][1]:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
 #	print(batch)
-#	print(prediction)
+#		print(prediction)
 
 print(cat_count / total_count)
 print(total_count)
+
+
 
 
 
@@ -174,20 +245,21 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
-	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	flat_file = np.asarray(res).flatten() / 255.0
+	flat_file = res / 255.0
+	flat_file = np.transpose(flat_file, (2, 0, 1))
 
-	batch = torch.from_numpy(flat_file)
+	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+	batch[0] = torch.from_numpy(flat_file)
 
 	prediction = net(Variable(batch))
 
-	if prediction > 0.5:
+	if prediction[0][0] < prediction[0][1]:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
 #	print(batch)
-#	print(prediction)
+#		print(prediction)
 
 print(dog_count / total_count)
 print(total_count)
