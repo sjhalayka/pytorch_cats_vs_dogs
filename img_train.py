@@ -140,44 +140,58 @@ else:
 
 	all_train_files = []
 
-	file_count = 0
+#	file_count = 0
 
-	path = 'training_set\\cats\\'
+	path = 'training_set/cats/'
 	filenames = next(os.walk(path))[2]
 
 	for f in filenames:
 
-		file_count = file_count + 1
-		if file_count >= 10000:
-			break;
+#		file_count = file_count + 1
+#		if file_count >= 10000:
+#			break;
 
 		print(path + f)
-		img = cv2.imread(path + f).astype(np.float32)
-		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = res / 255.0
-		flat_file = np.transpose(flat_file, (2, 0, 1))
-		all_train_files.append(image_type(0, flat_file))
+		img = cv2.imread(path + f)
+		
+		if (img is None) == False:
+
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+			all_train_files.append(image_type(0, flat_file))
+
+		else:
+			print("image read failure")
+
+#	file_count = 0
 
 
-	file_count = 0
 
-	path = 'training_set\\dogs\\'
+
+	path = 'training_set/dogs/'
 	filenames = next(os.walk(path))[2]
 
 	for f in filenames:
 
-		file_count = file_count + 1
-		if file_count >= 10000:
-			break;
-
+#		file_count = file_count + 1
+#		if file_count >= 10000:
+#			break;
 
 		print(path + f)
-		img = cv2.imread(path + f).astype(np.float32)
-		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = res / 255.0
-		flat_file = np.transpose(flat_file, (2, 0, 1))
-		all_train_files.append(image_type(1, flat_file))
+		img = cv2.imread(path + f)
+		
+		if (img is None) == False:
 
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+			all_train_files.append(image_type(1, flat_file))
+
+		else:
+			print("image read failure")
 
 
 
@@ -230,7 +244,7 @@ else:
 
 
 
-path = 'test_set\\cats\\'
+path = 'test_set/cats/'
 filenames = next(os.walk(path))[2]
 
 cat_count = 0
@@ -240,9 +254,16 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
-	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	flat_file = res / 255.0
-	flat_file = np.transpose(flat_file, (2, 0, 1))
+			
+	if (img is None) == False:
+		img = img.astype(np.float32)
+		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+		flat_file = res / 255.0
+		flat_file = np.transpose(flat_file, (2, 0, 1))
+
+	else:
+		print("image read failure")
+		continue
 
 	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
 	batch[0] = torch.from_numpy(flat_file)
@@ -263,7 +284,7 @@ print(total_count)
 
 
 
-path = 'test_set\\dogs\\'
+path = 'test_set/dogs/'
 filenames = next(os.walk(path))[2]
 
 dog_count = 0
@@ -273,9 +294,17 @@ for f in filenames:
 
 #	print(path + f)
 	img = cv2.imread(path + f).astype(np.float32)
-	res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-	flat_file = res / 255.0
-	flat_file = np.transpose(flat_file, (2, 0, 1))
+			
+	if (img is None) == False:
+		img = img.astype(np.float32)
+		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+		flat_file = res / 255.0
+		flat_file = np.transpose(flat_file, (2, 0, 1))
+
+	else:
+
+		print("image read failure")
+		continue
 
 	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
 	batch[0] = torch.from_numpy(flat_file)
