@@ -6,16 +6,17 @@ import torch
 from torch import flatten
 from torch.autograd import Variable
 import torch.nn as nn
+import torch.nn.functional as F
 
 import os.path
 from os import path
 
 
 
-img_width = 32
+img_width = 64
 num_channels = 3
 
-num_input_components = img_width*img_width*num_channels
+#num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
 num_epochs = 1000
@@ -27,35 +28,35 @@ learning_rate = 0.001
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_channels, num_output_components, all_train_files_len):
-        super().__init__()
-        self.model = torch.nn.Sequential(
-            #Input = 3 x 32 x 32, Output = 32 x 32 x 32
-            torch.nn.Conv2d(in_channels = num_channels, out_channels = 32, kernel_size = 3, padding = 1), 
-            torch.nn.ReLU(),
-            #Input = 32 x 32 x 32, Output = 32 x 16 x 16
-            torch.nn.MaxPool2d(kernel_size=2),
+	def __init__(self, num_channels, num_output_components, all_train_files_len):
+		super().__init__()
+		self.model = torch.nn.Sequential(
+		    #Input = 3 x 32 x 32, Output = 32 x 32 x 32
+		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 32, kernel_size = 3, padding = 1), 
+		    torch.nn.ReLU(),
+		    #Input = 32 x 32 x 32, Output = 32 x 16 x 16
+		    torch.nn.MaxPool2d(kernel_size=2),
   
-            #Input = 32 x 16 x 16, Output = 64 x 16 x 16
-            torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1),
-            torch.nn.ReLU(),
-            #Input = 64 x 16 x 16, Output = 64 x 8 x 8
-            torch.nn.MaxPool2d(kernel_size=2),
-              
-            #Input = 64 x 8 x 8, Output = 64 x 8 x 8
-            torch.nn.Conv2d(in_channels = 64, out_channels = 64, kernel_size = 3, padding = 1),
-            torch.nn.ReLU(),
-            #Input = 64 x 8 x 8, Output = 64 x 4 x 4
-            torch.nn.MaxPool2d(kernel_size=2),
+		    #Input = 32 x 16 x 16, Output = 64 x 16 x 16
+		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1),
+		    torch.nn.ReLU(),
+		    #Input = 64 x 16 x 16, Output = 64 x 8 x 8
+		    torch.nn.MaxPool2d(kernel_size=2),
+		      
+		    #Input = 64 x 8 x 8, Output = 64 x 8 x 8
+		    torch.nn.Conv2d(in_channels = 64, out_channels = 64, kernel_size = 3, padding = 1),
+		    torch.nn.ReLU(),
+		    #Input = 64 x 8 x 8, Output = 64 x 4 x 4
+		    torch.nn.MaxPool2d(kernel_size=2),
   
-            torch.nn.Flatten(),
-            torch.nn.Linear(64*4*4, all_train_files_len),
-            torch.nn.ReLU(),
-            torch.nn.Linear(all_train_files_len, num_output_components)
-        )
+		    torch.nn.Flatten(),
+		    torch.nn.Linear(4096, all_train_files_len),
+		    torch.nn.ReLU(),
+		    torch.nn.Linear(all_train_files_len, num_output_components)
+		)
   
-    def forward(self, x):
-        return self.model(x)
+	def forward(self, x):
+		return self.model(x)
 
 
 """	
@@ -140,16 +141,16 @@ else:
 
 	all_train_files = []
 
-#	file_count = 0
+	file_count = 0
 
 	path = 'training_set/cats/'
 	filenames = next(os.walk(path))[2]
 
 	for f in filenames:
 
-#		file_count = file_count + 1
-#		if file_count >= 10000:
-#			break;
+		file_count = file_count + 1
+		#if file_count >= 100:
+		#	break;
 
 		print(path + f)
 		img = cv2.imread(path + f)
@@ -165,7 +166,7 @@ else:
 		else:
 			print("image read failure")
 
-#	file_count = 0
+	file_count = 0
 
 
 
@@ -175,9 +176,9 @@ else:
 
 	for f in filenames:
 
-#		file_count = file_count + 1
-#		if file_count >= 10000:
-#			break;
+		file_count = file_count + 1
+		#if file_count >= 100:
+		#	break;
 
 		print(path + f)
 		img = cv2.imread(path + f)
@@ -253,9 +254,10 @@ total_count = 0
 for f in filenames:
 
 #	print(path + f)
-	img = cv2.imread(path + f).astype(np.float32)
+	img = cv2.imread(path + f)
 			
 	if (img is None) == False:
+
 		img = img.astype(np.float32)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 		flat_file = res / 255.0
@@ -293,9 +295,10 @@ total_count = 0
 for f in filenames:
 
 #	print(path + f)
-	img = cv2.imread(path + f).astype(np.float32)
+	img = cv2.imread(path + f)
 			
 	if (img is None) == False:
+
 		img = img.astype(np.float32)
 		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
 		flat_file = res / 255.0
