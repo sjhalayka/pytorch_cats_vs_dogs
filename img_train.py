@@ -164,7 +164,6 @@ else:
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
 
-
 	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)
 	
@@ -179,9 +178,12 @@ else:
 			batch[count] = i.float_img
 		
 			if i.img_type == 0: # cat
+
 				ground_truth[count][0] = 1
 				ground_truth[count][1] = 0
+			
 			elif i.img_type == 1: # dog
+				
 				ground_truth[count][0] = 0
 				ground_truth[count][1] = 1
 
@@ -189,7 +191,6 @@ else:
 	
 		x = Variable(torch.from_numpy(batch))
 		y = Variable(torch.from_numpy(ground_truth))
-
 
 		prediction = net(x)	 
 		loss = loss_func(prediction, y)
@@ -214,7 +215,6 @@ total_count = 0
 
 for f in filenames:
 
-#	print(path + f)
 	img = cv2.imread(path + f)
 			
 	if (img is None) == False:
@@ -225,6 +225,7 @@ for f in filenames:
 		flat_file = np.transpose(flat_file, (2, 0, 1))
 
 	else:
+
 		print("image read failure")
 		continue
 
@@ -237,8 +238,6 @@ for f in filenames:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
-#	print(batch)
-#		print(prediction)
 
 print(cat_count / total_count)
 print(total_count)
@@ -255,7 +254,6 @@ total_count = 0
 
 for f in filenames:
 
-#	print(path + f)
 	img = cv2.imread(path + f)
 			
 	if (img is None) == False:
@@ -279,8 +277,6 @@ for f in filenames:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
-#	print(batch)
-#		print(prediction)
 
 print(dog_count / total_count)
 print(total_count)
