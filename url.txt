@@ -1,1 +1,10 @@
+data 1
 https://www.kaggle.com/datasets/tongpython/cat-and-dog?select=training_set
+
+https://www.doczamora.com/cats-vs-dogs-binary-classifier-with-pytorch-cnn
+
+data 2 (broken)
+https://www.kaggle.com/datasets/karakaggle/kaggle-cat-vs-dog-dataset
+
+data 3 (works ok)
+https://www.kaggle.com/competitions/dogs-vs-cats/data

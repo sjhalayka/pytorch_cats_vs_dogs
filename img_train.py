@@ -13,7 +13,7 @@ from os import path
 
 
 
-img_width = 64
+img_width = 32
 num_channels = 3
 
 #num_input_components = img_width*img_width*num_channels
@@ -22,7 +22,7 @@ num_output_components = 2
 num_epochs = 1000
 learning_rate = 0.001
 
-
+max_train_files = 100000
 
 
 
@@ -50,9 +50,9 @@ class Net(torch.nn.Module):
 		    torch.nn.MaxPool2d(kernel_size=2),
   
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(4096, all_train_files_len),
+		    torch.nn.Linear(1024, 256),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(all_train_files_len, num_output_components)
+		    torch.nn.Linear(256, num_output_components)
 		)
   
 	def forward(self, x):
@@ -102,6 +102,9 @@ else:
 
 	all_train_files = []
 
+
+
+
 	file_count = 0
 
 	path = 'training_set/cats/'
@@ -110,8 +113,8 @@ else:
 	for f in filenames:
 
 		file_count = file_count + 1
-		#if file_count >= 100:
-		#	break;
+		if file_count >= max_train_files:
+			break;
 
 		print(path + f)
 		img = cv2.imread(path + f)
@@ -138,8 +141,8 @@ else:
 	for f in filenames:
 
 		file_count = file_count + 1
-		#if file_count >= 100:
-		#	break;
+		if file_count >= max_train_files:
+			break;
 
 		print(path + f)
 		img = cv2.imread(path + f)
