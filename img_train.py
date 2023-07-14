@@ -13,16 +13,20 @@ from os import path
 
 
 
+
+
 img_width = 32
 num_channels = 3
 
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 1000
+num_epochs = 3000
 learning_rate = 0.001
 
 max_train_files = 100000
+
+
 
 
 
@@ -76,6 +80,8 @@ class Net(torch.nn.Module):
 
 
 
+
+
 class float_image:
 
 	def __init__(self, img):
@@ -86,6 +92,9 @@ class image_type:
 	def __init__(self, img_type, float_img):
 		self.img_type = img_type
 		self.float_img = float_img
+
+
+
 
 
 
@@ -130,10 +139,11 @@ else:
 		else:
 			print("image read failure")
 
+
+
+
+
 	file_count = 0
-
-
-
 
 	path = 'training_set/dogs/'
 	filenames = next(os.walk(path))[2]
