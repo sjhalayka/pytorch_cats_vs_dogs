@@ -21,7 +21,7 @@ num_channels = 3
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 3000
+num_epochs = 1000
 learning_rate = 0.001
 
 max_train_files = 100000
