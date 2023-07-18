@@ -22,14 +22,13 @@ num_channels = 3
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 2
+num_epochs = 10
 learning_rate = 0.001
 
-max_train_files = 100
+max_train_files = 100000
 
-
-
-
+num_recursions = 10
+num_child_networks = 5
 
 
 class Net(torch.nn.Module):
@@ -85,9 +84,14 @@ class image_type:
 
 
 
-def do_network(batch, ground_truth, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
 
-	net = Net(num_channels, num_output_components)
+
+def do_network(in_net, batch, ground_truth, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
+
+	if (in_net is None):
+		in_net = Net(num_channels, num_output_components)
+
+	net = in_net
 
 	random.seed(random_seed)
 
@@ -95,6 +99,8 @@ def do_network(batch, ground_truth, num_channels, num_output_components, all_tra
 	loss_func = torch.nn.MSELoss()
 
 	loss = 0;
+
+	net.to(torch.device("cuda:0"))
 
 	for epoch in range(num_epochs):
 		
@@ -120,9 +126,14 @@ def do_network(batch, ground_truth, num_channels, num_output_components, all_tra
 	
 		x = Variable(torch.from_numpy(batch))
 		y = Variable(torch.from_numpy(ground_truth))
+		x = x.to(torch.device("cuda:0"))
+		y = y.to(torch.device("cuda:0"))
+
 
 		prediction = net(x)	 
 		loss = loss_func(prediction, y)
+
+		print(epoch, loss)
 
 		optimizer.zero_grad()	 # clear gradients for next train
 		loss.backward()		 # backpropagation, compute gradients
@@ -141,6 +152,15 @@ if False: #path.exists('weights_' + str(img_width) + '_' + str(num_epochs) + '.p
 else:
 	print("training...")
 
+
+	if torch.cuda.is_available():
+		dev = "cuda:0"
+	else: 
+		dev = "cpu"
+
+	device = torch.device(dev)
+
+	print(device)
 
 
 
@@ -206,9 +226,27 @@ else:
 
 
 
+
 	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)	
-	net, loss = do_network(batch, ground_truth, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+
+	curr_net, curr_loss = do_network(None, batch, ground_truth, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+
+	for y in range(num_recursions):
+		for x in range(num_child_networks):
+
+			print(y, x)
+
+			net, loss = do_network(curr_net, batch, ground_truth, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+
+			if loss < curr_loss:
+
+				curr_loss = loss
+				curr_net = net
+
+
+
+
 
 
 
@@ -241,7 +279,7 @@ for f in filenames:
 	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
 	batch[0] = torch.from_numpy(flat_file)
 
-	prediction = net(Variable(batch))
+	prediction = curr_net(Variable(batch))
 
 	if prediction[0][0] > prediction[0][1]:
 		cat_count = cat_count + 1
@@ -280,7 +318,7 @@ for f in filenames:
 	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
 	batch[0] = torch.from_numpy(flat_file)
 
-	prediction = net(Variable(batch))
+	prediction = curr_net(Variable(batch))
 
 	if prediction[0][0] < prediction[0][1]:
 		dog_count = dog_count + 1
