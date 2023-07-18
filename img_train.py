@@ -25,13 +25,13 @@ num_channels = 3
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 5
+num_epochs = 10
 learning_rate = 0.001
 
 max_train_files = 100000
 train_data_sliding_window_len = 1000
 num_recursions = 10
-num_child_networks = 5
+num_child_networks = 10
 
 
 class Net(torch.nn.Module):
@@ -89,7 +89,6 @@ class image_type:
 
 
 
-#def do_network(in_net, batch, ground_truth, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
 def do_network(in_net, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
 
 	if (in_net is None):
@@ -106,26 +105,26 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	net.to(torch.device(dev_string))
 
-	curr_train_file = 0
-	train_files_remaining = len(all_train_files)
-	buffer_size = train_data_sliding_window_len # use a sliding window width that fits in 8GB of GPU RAM
+	for epoch in range(num_epochs):
 
-	while train_files_remaining > 0:
+		random.shuffle(all_train_files)
 
-		if train_files_remaining < buffer_size:
-			buffer_size = train_files_remaining
+		curr_train_file = 0
+		train_files_remaining = len(all_train_files)
+		buffer_size = train_data_sliding_window_len # use a sliding window width that fits in 8GB of GPU RAM
+
+		while train_files_remaining > 0:
+
+			if train_files_remaining < buffer_size:
+				buffer_size = train_files_remaining
 	
-		buffer = all_train_files[curr_train_file : curr_train_file + buffer_size]
+			buffer = all_train_files[curr_train_file : (curr_train_file + buffer_size)]
 
-		train_files_remaining -= buffer_size
-		curr_train_file += buffer_size
+			train_files_remaining -= buffer_size
+			curr_train_file += buffer_size
 
-		batch = np.zeros((buffer_size, num_channels, img_width, img_width), dtype=np.float32)
-		ground_truth = np.zeros((buffer_size, num_output_components), dtype=np.float32)	
-
-		for epoch in range(num_epochs):
-		
-			random.shuffle(buffer)
+			batch = np.zeros((buffer_size, num_channels, img_width, img_width), dtype=np.float32)
+			ground_truth = np.zeros((buffer_size, num_output_components), dtype=np.float32)
 
 			count = 0
 
@@ -160,6 +159,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			optimizer.zero_grad()	 # clear gradients for next train
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
+
 	
 	return net, loss
 
@@ -238,9 +238,10 @@ else:
 	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
 
 	for y in range(num_recursions):
+
 		for x in range(num_child_networks):
 
-			print(y, x)
+			print(y, num_recursions, x, num_child_networks)
 
 			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
 
@@ -248,6 +249,7 @@ else:
 
 				curr_loss = loss
 				curr_net = net
+
 
 	end = time.time()
 
