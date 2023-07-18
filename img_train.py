@@ -30,7 +30,7 @@ learning_rate = 0.001
 
 max_train_files = 100000
 train_data_sliding_window_len = 1000
-num_recursions = 100
+num_recursions = 100	
 num_child_networks = 10
 
 
@@ -244,6 +244,9 @@ else:
 			print(y, num_recursions, x, num_child_networks)
 
 			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
+
+			if loss == curr_loss:
+				print("equals")
 
 			if loss < curr_loss:
 
