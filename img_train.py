@@ -30,7 +30,7 @@ learning_rate = 0.001
 
 max_train_files = 100000
 train_data_sliding_window_len = 1000
-num_recursions = 10
+num_recursions = 100
 num_child_networks = 10
 
 
