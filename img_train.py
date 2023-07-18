@@ -108,7 +108,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	curr_train_file = 0
 	train_files_remaining = len(all_train_files)
-	buffer_size = 10000
+	buffer_size = 15000 # use a data 'window' that fits in 8GB of GPU RAM
 
 	while train_files_remaining > 0:
 
@@ -237,14 +237,14 @@ else:
 
 	start = time.time()
 
-	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
 
 	for y in range(num_recursions):
 		for x in range(num_child_networks):
 
 			print(y, x)
 
-			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
 
 			if loss < curr_loss:
 
