@@ -29,7 +29,7 @@ num_epochs = 5
 learning_rate = 0.001
 
 max_train_files = 100000
-
+train_data_sliding_window_len = 15000
 num_recursions = 10
 num_child_networks = 5
 
@@ -108,7 +108,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	curr_train_file = 0
 	train_files_remaining = len(all_train_files)
-	buffer_size = 15000 # use a data sliding window that fits in 8GB of GPU RAM
+	buffer_size = train_data_sliding_window_len # use a sliding window width that fits in 8GB of GPU RAM
 
 	while train_files_remaining > 0:
 
@@ -116,8 +116,6 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			buffer_size = train_files_remaining
 	
 		buffer = all_train_files[curr_train_file : curr_train_file + buffer_size]
-
-		print(buffer_size)
 
 		train_files_remaining -= buffer_size
 		curr_train_file += buffer_size
