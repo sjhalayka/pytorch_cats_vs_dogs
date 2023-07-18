@@ -30,8 +30,8 @@ learning_rate = 0.001
 
 max_train_files = 100000
 
-num_recursions = 2
-num_child_networks = 2
+num_recursions = 10
+num_child_networks = 5
 
 
 class Net(torch.nn.Module):
