@@ -14,7 +14,7 @@ from os import path
 import time
 
 
-dev_string = "cpu" #"cuda:0"
+dev_string = "cuda:0"
 
 
 
@@ -30,8 +30,8 @@ learning_rate = 0.001
 
 max_train_files = 100000
 
-num_recursions = 10
-num_child_networks = 5
+num_recursions = 2
+num_child_networks = 2
 
 
 class Net(torch.nn.Module):
@@ -89,7 +89,8 @@ class image_type:
 
 
 
-def do_network(in_net, batch, ground_truth, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
+#def do_network(in_net, batch, ground_truth, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
+def do_network(in_net, num_channels, num_output_components, all_train_files, random_seed, num_epochs):
 
 	if (in_net is None):
 		in_net = Net(num_channels, num_output_components)
@@ -105,43 +106,62 @@ def do_network(in_net, batch, ground_truth, num_channels, num_output_components,
 
 	net.to(torch.device(dev_string))
 
-	for epoch in range(num_epochs):
-		
-		random.shuffle(all_train_files)
+	curr_train_file = 0
+	train_files_remaining = len(all_train_files)
+	buffer_size = 10000
 
-		count = 0
+	while train_files_remaining > 0:
 
-		for i in all_train_files:
-
-			batch[count] = i.float_img
-		
-			if i.img_type == 0: # cat
-
-				ground_truth[count][0] = 1
-				ground_truth[count][1] = 0
-			
-			elif i.img_type == 1: # dog
-				
-				ground_truth[count][0] = 0
-				ground_truth[count][1] = 1
-
-			count = count + 1
+		if train_files_remaining < buffer_size:
+			buffer_size = train_files_remaining
 	
-		x = Variable(torch.from_numpy(batch))
-		y = Variable(torch.from_numpy(ground_truth))
-		x = x.to(torch.device(dev_string))
-		y = y.to(torch.device(dev_string))
+		buffer = all_train_files[curr_train_file : curr_train_file + buffer_size]
 
-		prediction = net(x)
-		prediction = prediction.to(torch.device(dev_string))
+		print(buffer_size)
 
-		loss = loss_func(prediction, y)
+		train_files_remaining -= buffer_size
+		curr_train_file += buffer_size
 
-		print(epoch, loss)
+		batch = np.zeros((buffer_size, num_channels, img_width, img_width), dtype=np.float32)
+		ground_truth = np.zeros((buffer_size, num_output_components), dtype=np.float32)	
 
-		optimizer.zero_grad()	 # clear gradients for next train
-		loss.backward()		 # backpropagation, compute gradients
-		optimizer.step()		# apply gradients
+		for epoch in range(num_epochs):
+		
+			random.shuffle(buffer)
+
+			count = 0
+
+			for i in buffer:
+
+				batch[count] = i.float_img
+		
+				if i.img_type == 0: # cat
+
+					ground_truth[count][0] = 1
+					ground_truth[count][1] = 0
+			
+				elif i.img_type == 1: # dog
+				
+					ground_truth[count][0] = 0
+					ground_truth[count][1] = 1
+
+				count = count + 1
+	
+			x = Variable(torch.from_numpy(batch))
+			y = Variable(torch.from_numpy(ground_truth))
+			x = x.to(torch.device(dev_string))
+			y = y.to(torch.device(dev_string))
+
+			prediction = net(x)
+			prediction = prediction.to(torch.device(dev_string))
+
+			loss = loss_func(prediction, y)
+
+			print(epoch, loss)
+
+			optimizer.zero_grad()	 # clear gradients for next train
+			loss.backward()		 # backpropagation, compute gradients
+			optimizer.step()		# apply gradients
 	
 	return net, loss
 
@@ -160,12 +180,7 @@ else:
 	device = torch.device(dev_string)
 
 
-
-
-
 	all_train_files = []
-
-
 
 
 	file_count = 0
@@ -192,9 +207,6 @@ else:
 
 		else:
 			print("image read failure")
-
-
-
 
 
 	file_count = 0
@@ -225,17 +237,14 @@ else:
 
 	start = time.time()
 
-	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
-	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)	
-
-	curr_net, curr_loss = do_network(None, batch, ground_truth, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
 
 	for y in range(num_recursions):
 		for x in range(num_child_networks):
 
 			print(y, x)
 
-			net, loss = do_network(curr_net, batch, ground_truth, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
+			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()), num_epochs)
 
 			if loss < curr_loss:
 
@@ -292,9 +301,6 @@ for f in filenames:
 
 print(cat_count / total_count)
 print(total_count)
-
-
-
 
 
 path = 'test_set/dogs/'
