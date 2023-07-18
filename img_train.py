@@ -108,7 +108,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	curr_train_file = 0
 	train_files_remaining = len(all_train_files)
-	buffer_size = 15000 # use a data 'window' that fits in 8GB of GPU RAM
+	buffer_size = 15000 # use a data sliding window that fits in 8GB of GPU RAM
 
 	while train_files_remaining > 0:
 
