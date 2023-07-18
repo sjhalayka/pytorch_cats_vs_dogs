@@ -14,6 +14,9 @@ from os import path
 import time
 
 
+dev_string = "cpu" #"cuda:0"
+
+
 
 
 img_width = 32
@@ -22,10 +25,10 @@ num_channels = 3
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 10
+num_epochs = 5
 learning_rate = 0.001
 
-max_train_files = 100
+max_train_files = 100000
 
 num_recursions = 10
 num_child_networks = 5
@@ -100,7 +103,7 @@ def do_network(in_net, batch, ground_truth, num_channels, num_output_components,
 
 	loss = 0;
 
-	net.to(torch.device("cuda:0"))
+	net.to(torch.device(dev_string))
 
 	for epoch in range(num_epochs):
 		
@@ -126,13 +129,11 @@ def do_network(in_net, batch, ground_truth, num_channels, num_output_components,
 	
 		x = Variable(torch.from_numpy(batch))
 		y = Variable(torch.from_numpy(ground_truth))
-		x = x.to(torch.device("cuda:0"))
-		y = y.to(torch.device("cuda:0"))
-
+		x = x.to(torch.device(dev_string))
+		y = y.to(torch.device(dev_string))
 
 		prediction = net(x)
-		prediction = prediction.to(torch.device("cuda:0"))
-
+		prediction = prediction.to(torch.device(dev_string))
 
 		loss = loss_func(prediction, y)
 
@@ -156,7 +157,7 @@ else:
 	print("training...")
 
 
-	device = torch.device("cuda:0")
+	device = torch.device(dev_string)
 
 
 
@@ -222,7 +223,7 @@ else:
 			print("image read failure")
 
 
-
+	start = time.time()
 
 	batch = np.zeros((len(all_train_files), num_channels, img_width, img_width), dtype=np.float32)
 	ground_truth = np.zeros((len(all_train_files), num_output_components), dtype=np.float32)	
@@ -241,7 +242,9 @@ else:
 				curr_loss = loss
 				curr_net = net
 
+	end = time.time()
 
+	print(end - start)
 
 
 
@@ -277,10 +280,10 @@ for f in filenames:
 	batch[0] = torch.from_numpy(flat_file)
 		
 	x = Variable(batch)
-	x = x.to(torch.device("cuda:0"))
+	x = x.to(torch.device(dev_string))
 
 	prediction = curr_net(x)
-	prediction = prediction.to(torch.device("cuda:0"))
+	prediction = prediction.to(torch.device(dev_string))
 
 	if prediction[0][0] > prediction[0][1]:
 		cat_count = cat_count + 1
@@ -320,10 +323,10 @@ for f in filenames:
 	batch[0] = torch.from_numpy(flat_file)
 		
 	x = Variable(batch)
-	x = x.to(torch.device("cuda:0"))
+	x = x.to(torch.device(dev_string))
 
 	prediction = curr_net(x)
-	prediction = prediction.to(torch.device("cuda:0"))
+	prediction = prediction.to(torch.device(dev_string))
 
 	if prediction[0][0] < prediction[0][1]:
 		dog_count = dog_count + 1
