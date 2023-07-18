@@ -29,7 +29,7 @@ num_epochs = 5
 learning_rate = 0.001
 
 max_train_files = 100000
-train_data_sliding_window_len = 15000
+train_data_sliding_window_len = 1000
 num_recursions = 10
 num_child_networks = 5
 
