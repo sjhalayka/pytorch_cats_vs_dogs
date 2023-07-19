@@ -14,59 +14,73 @@ from os import path
 import time
 
 
-dev_string = "cuda:0"
+dev_string = "cuda:0" #..."cpu"
 
 
 
 
-img_width = 32
+img_width = 256
 num_channels = 3
 
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 10
+num_epochs = 250
 learning_rate = 0.001
 
-max_train_files = 100000
-train_data_sliding_window_len = 1000
-num_recursions = 100	
-num_child_networks = 10
+max_train_files_per_animal_type = 100000
+train_data_sliding_window_len = 32
+num_recursions = 0
+num_child_networks = 0
 
 
 class Net(torch.nn.Module):
 
 	def __init__(self, num_channels, num_output_components):
-
+	
 		super().__init__()
 		self.model = torch.nn.Sequential(
-		    #Input = 3 x 32 x 32, Output = 32 x 32 x 32
-		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 32, kernel_size = 3, padding = 1), 
+		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 16, kernel_size = 3, padding = 1), 
 		    torch.nn.ReLU(),
-		    #Input = 32 x 32 x 32, Output = 32 x 16 x 16
-		    torch.nn.MaxPool2d(kernel_size=2),
+		    torch.nn.MaxPool2d(kernel_size=3),
   
-		    #Input = 32 x 16 x 16, Output = 64 x 16 x 16
+		    torch.nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 3, padding = 1),
+		    torch.nn.ReLU(),
+		    torch.nn.MaxPool2d(kernel_size=3),
+		      
 		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1),
 		    torch.nn.ReLU(),
-		    #Input = 64 x 16 x 16, Output = 64 x 8 x 8
-		    torch.nn.MaxPool2d(kernel_size=2),
-		      
-		    #Input = 64 x 8 x 8, Output = 64 x 8 x 8
-		    torch.nn.Conv2d(in_channels = 64, out_channels = 64, kernel_size = 3, padding = 1),
-		    torch.nn.ReLU(),
-		    #Input = 64 x 8 x 8, Output = 64 x 4 x 4
-		    torch.nn.MaxPool2d(kernel_size=2),
+		    torch.nn.MaxPool2d(kernel_size=3),
   
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(1024, 256),
+		    torch.nn.Linear(5184, 8),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(256, num_output_components)
+		    torch.nn.Linear(8, num_output_components)
 		)
   
 	def forward(self, x):
 		return self.model(x)
 
+"""
+		super().__init__()
+
+		self.conv1 = nn.Conv2d(num_channels, 6, 5)
+		self.pool = nn.MaxPool2d(2, 2)
+		self.conv2 = nn.Conv2d(6, 16, 5)
+		self.fc1 = nn.Linear(2704, 120)
+		self.fc2 = nn.Linear(120, 84)
+		self.fc3 = nn.Linear(84, num_output_components)
+
+	def forward(self, x):
+		x = self.pool(F.relu(self.conv1(x)))
+		x = self.pool(F.relu(self.conv2(x)))
+		x = torch.flatten(x, 1) # flatten all dimensions except batch
+		x = F.relu(self.fc1(x))
+		x = F.relu(self.fc2(x))
+		x = self.fc3(x)
+		return x
+
+"""
 
 
 
@@ -101,9 +115,13 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
 
+#	loss_func = torch.nn.CrossEntropyLoss()
+	#optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
 	loss = 0;
 
 	net.to(torch.device(dev_string))
+
 
 	for epoch in range(num_epochs):
 
@@ -189,7 +207,7 @@ else:
 	for f in filenames:
 
 		file_count = file_count + 1
-		if file_count >= max_train_files:
+		if file_count >= max_train_files_per_animal_type:
 			break;
 
 		print(path + f)
@@ -215,7 +233,7 @@ else:
 	for f in filenames:
 
 		file_count = file_count + 1
-		if file_count >= max_train_files:
+		if file_count >= max_train_files_per_animal_type:
 			break;
 
 		print(path + f)
@@ -244,9 +262,6 @@ else:
 			print(y, num_recursions, x, num_child_networks)
 
 			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, round(time.time()*1000), num_epochs)
-
-			if loss == curr_loss:
-				print("equals")
 
 			if loss < curr_loss:
 
@@ -297,7 +312,7 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-	if prediction[0][0] > prediction[0][1]:
+	if prediction[0][0] >= 0.5:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
@@ -337,7 +352,8 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-	if prediction[0][0] < prediction[0][1]:
+#	if prediction[0][0] < prediction[0][1]:
+	if prediction[0][1] >= 0.5:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
