@@ -29,7 +29,7 @@ num_epochs = 250
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_len = 32
+train_data_sliding_window_len = 1024
 num_recursions = 0
 num_child_networks = 0
 
@@ -53,9 +53,9 @@ class Net(torch.nn.Module):
 		    torch.nn.MaxPool2d(kernel_size=3),
   
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(5184, 8),
+		    torch.nn.Linear(5184, 256),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(8, num_output_components)
+		    torch.nn.Linear(256, num_output_components)
 		)
   
 	def forward(self, x):
