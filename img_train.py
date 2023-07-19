@@ -25,11 +25,11 @@ num_channels = 3
 #num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
-num_epochs = 250
+num_epochs = 10
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_len = 1024
+train_data_sliding_window_len = 32
 num_recursions = 0
 num_child_networks = 0
 
