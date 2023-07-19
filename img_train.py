@@ -29,7 +29,7 @@ num_epochs = 10
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_len = 32
+train_data_sliding_window_length = 128
 num_recursions = 0
 num_child_networks = 0
 
@@ -110,17 +110,17 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	net = in_net
 
+
+
 	random.seed(random_seed)
 
 	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
 
-#	loss_func = torch.nn.CrossEntropyLoss()
-	#optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
 	loss = 0;
 
 	net.to(torch.device(dev_string))
+
 
 
 	for epoch in range(num_epochs):
@@ -129,7 +129,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 		curr_train_file = 0
 		train_files_remaining = len(all_train_files)
-		buffer_size = train_data_sliding_window_len # use a sliding window width that fits in 8GB of GPU RAM
+		buffer_size = train_data_sliding_window_length # use a sliding window width that fits in 8GB of GPU RAM
 
 		while train_files_remaining > 0:
 
