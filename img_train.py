@@ -149,9 +149,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 			loss = loss_func(prediction, y)
 			
-			print(train_files_remaining)
-			print(epoch, loss)
-			print("")
+			print(train_files_remaining, epoch, loss)
 
 			optimizer.zero_grad()	 # clear gradients for next train
 			loss.backward()		 # backpropagation, compute gradients
