@@ -61,29 +61,6 @@ class Net(torch.nn.Module):
 	def forward(self, x):
 		return self.model(x)
 
-"""
-		super().__init__()
-
-		self.conv1 = nn.Conv2d(num_channels, 6, 5)
-		self.pool = nn.MaxPool2d(2, 2)
-		self.conv2 = nn.Conv2d(6, 16, 5)
-		self.fc1 = nn.Linear(2704, 120)
-		self.fc2 = nn.Linear(120, 84)
-		self.fc3 = nn.Linear(84, num_output_components)
-
-	def forward(self, x):
-		x = self.pool(F.relu(self.conv1(x)))
-		x = self.pool(F.relu(self.conv2(x)))
-		x = torch.flatten(x, 1) # flatten all dimensions except batch
-		x = F.relu(self.fc1(x))
-		x = F.relu(self.fc2(x))
-		x = self.fc3(x)
-		return x
-
-"""
-
-
-
 
 
 
@@ -171,8 +148,10 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			prediction = prediction.to(torch.device(dev_string))
 
 			loss = loss_func(prediction, y)
-
+			
+			print(train_files_remaining)
 			print(epoch, loss)
+			print("")
 
 			optimizer.zero_grad()	 # clear gradients for next train
 			loss.backward()		 # backpropagation, compute gradients
@@ -312,7 +291,7 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-	if prediction[0][0] >= 0.5:
+	if prediction[0][0] >= 0.5 and prediction[0][1] <= 0.5:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
@@ -352,8 +331,7 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-#	if prediction[0][0] < prediction[0][1]:
-	if prediction[0][1] >= 0.5:
+	if prediction[0][1] >= 0.5 and prediction[0][0] <= 0.5:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
