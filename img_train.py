@@ -55,7 +55,9 @@ class Net(torch.nn.Module):
 		    torch.nn.Flatten(),
 		    torch.nn.Linear(5184, 256),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(256, num_output_components)
+		    torch.nn.Linear(256, num_output_components),
+
+			torch.nn.Softmax(dim=1)
 		)
   
 	def forward(self, x):
@@ -170,7 +172,9 @@ else:
 	print("training...")
 
 
+
 	device = torch.device(dev_string)
+
 
 
 	all_train_files = []
@@ -289,13 +293,18 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-	if prediction[0][0] >= 0.5 and prediction[0][1] <= 0.5:
+#	print(prediction)
+
+	if prediction[0][0] >= 0.5: # and prediction[0][1] <= 0.5:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
 
 print(cat_count / total_count)
 print(total_count)
+
+
+
 
 
 path = 'test_set/dogs/'
@@ -329,7 +338,9 @@ for f in filenames:
 	prediction = curr_net(x)
 	prediction = prediction.to(torch.device(dev_string))
 
-	if prediction[0][1] >= 0.5 and prediction[0][0] <= 0.5:
+#	print(prediction)
+
+	if prediction[0][1] >= 0.5: # and prediction[0][0] <= 0.5:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
