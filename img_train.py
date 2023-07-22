@@ -56,7 +56,7 @@ class Net(torch.nn.Module):
 		    torch.nn.Linear(5184, 256),
 		    torch.nn.ReLU(),
 		    torch.nn.Linear(256, num_output_components),
-
+			
 			torch.nn.Softmax(dim=1)
 		)
   
