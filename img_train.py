@@ -14,24 +14,25 @@ from os import path
 import time
 
 
-dev_string = "cuda:0" #..."cpu"
+dev_string = "cuda:0" # "cpu"
 
 
 
 
-img_width = 256
+img_width = 384
 num_channels = 3
+kernel_width_height = 3
 
-#num_input_components = img_width*img_width*num_channels
 num_output_components = 2
 
 num_epochs = 100
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_length = 128
+train_data_sliding_window_length = 128 # reduce this if running out of GPU RAM
 num_recursions = 0
 num_child_networks = 0
+
 
 
 class Net(torch.nn.Module):
@@ -40,20 +41,21 @@ class Net(torch.nn.Module):
 	
 		super().__init__()
 		self.model = torch.nn.Sequential(
-		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 16, kernel_size = 3, padding = 1), 
+
+		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 16, kernel_size = kernel_width_height), 
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size=3),
+		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
   
-		    torch.nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 3, padding = 1),
+		    torch.nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = kernel_width_height),
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size=3),
+		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
 		      
-		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1),
+		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = kernel_width_height),
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size=3),
+		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
   
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(5184, 256),
+		    torch.nn.Linear(10816, 256),
 		    torch.nn.ReLU(),
 		    torch.nn.Linear(256, num_output_components),
 			
@@ -180,8 +182,8 @@ else:
 	all_train_files = []
 
 
-	file_count = 0
 
+	file_count = 0
 	path = 'training_set/cats/'
 	filenames = next(os.walk(path))[2]
 
@@ -206,8 +208,9 @@ else:
 			print("image read failure")
 
 
-	file_count = 0
 
+
+	file_count = 0
 	path = 'training_set/dogs/'
 	filenames = next(os.walk(path))[2]
 
@@ -230,6 +233,9 @@ else:
 
 		else:
 			print("image read failure")
+
+
+
 
 
 	start = time.time()
@@ -295,7 +301,7 @@ for f in filenames:
 
 #	print(prediction)
 
-	if prediction[0][0] >= 0.5: # and prediction[0][1] <= 0.5:
+	if prediction[0][0] > 0.5: # and prediction[0][1] <= 0.5:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
@@ -340,7 +346,7 @@ for f in filenames:
 
 #	print(prediction)
 
-	if prediction[0][1] >= 0.5: # and prediction[0][0] <= 0.5:
+	if prediction[0][1] > 0.5: # and prediction[0][0] <= 0.5:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
