@@ -301,7 +301,7 @@ for f in filenames:
 
 #	print(prediction)
 
-	if prediction[0][0] > 0.5: # and prediction[0][1] <= 0.5:
+	if prediction[0][0] > 0.5:
 		cat_count = cat_count + 1
 
 	total_count = total_count + 1
@@ -346,7 +346,7 @@ for f in filenames:
 
 #	print(prediction)
 
-	if prediction[0][1] > 0.5: # and prediction[0][0] <= 0.5:
+	if prediction[0][1] > 0.5:
 		dog_count = dog_count + 1
 
 	total_count = total_count + 1
