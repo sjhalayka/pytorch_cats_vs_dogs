@@ -137,7 +137,7 @@ def do_train_files(all_train_files):
 
 
 
-def do_test_files(in_net, file_handle, epoch):
+def do_test_files(in_net, file_handle, epoch, random_seed):
 
 	path = 'test_set/cats/'
 	filenames = next(os.walk(path))[2]
@@ -177,17 +177,14 @@ def do_test_files(in_net, file_handle, epoch):
 
 		total_count = total_count + 1
 
-
+	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(cat_count / total_count) + "\n")
 	file_handle.write(str(total_count) + "\n")
-	print(str(epoch) + "\n")
-	print(str(cat_count / total_count) + "\n")
-	print(str(total_count) + "\n")
-#	print(cat_count / total_count)
-#	print(total_count)
-
-
+	print(str(random_seed))
+	print(str(epoch))
+	print(str(cat_count / total_count))
+	print(str(total_count))
 
 
 
@@ -229,15 +226,15 @@ def do_test_files(in_net, file_handle, epoch):
 
 		total_count = total_count + 1
 
-
+	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(dog_count / total_count) + "\n")
 	file_handle.write(str(total_count) + "\n")
-	print(str(epoch) + "\n")
-	print(str(dog_count / total_count) + "\n")
-	print(str(total_count) + "\n")
-#	print(dog_count / total_count)
-#	print(total_count)
+	print(str(random_seed))
+	print(str(epoch))
+	print(str(dog_count / total_count))
+	print(str(total_count))
+
 
 
 
@@ -320,7 +317,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			optimizer.step()		# apply gradients
 
 		if ((epoch + 1) % 10 == 0):
-			do_test_files(net, file_handle, epoch + 1)
+			do_test_files(net, file_handle, epoch + 1, random_seed)
 
 	return net, loss
 
