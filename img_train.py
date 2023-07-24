@@ -3,20 +3,12 @@ import math
 import cv2
 import random
 import torch
-from torch import flatten
 from torch.autograd import Variable
-
-
 import os.path
 from os import path
-
 import time
 
-
 dev_string = "cuda:0" # "cpu"
-
-
-
 
 img_width = 400 # reduce this if running out of CPU RAM
 num_channels = 3 # RGB images
@@ -25,7 +17,7 @@ padding_width = round((kernel_width - 1) / 2) # an even integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
 num_epochs = 100
-learning_rate = 0.001
+learning_rate = 0.0001 # test... was 0.001 before
 
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
@@ -80,6 +72,157 @@ class image_type:
 	def __init__(self, img_type, float_img):
 		self.img_type = img_type
 		self.float_img = float_img
+
+
+
+
+
+
+def do_train_files(all_train_files):
+
+	file_count = 0
+	path = 'training_set/cats/'
+	filenames = next(os.walk(path))[2]
+
+	for f in filenames:
+
+		file_count = file_count + 1
+		if file_count >= max_train_files_per_animal_type:
+			break;
+
+		print(path + f)
+		img = cv2.imread(path + f)
+		
+		if (img is None) == False:
+
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+			all_train_files.append(image_type(0, flat_file))
+
+		else:
+			print("image read failure")
+
+
+
+
+	file_count = 0
+	path = 'training_set/dogs/'
+	filenames = next(os.walk(path))[2]
+
+	for f in filenames:
+
+		file_count = file_count + 1
+		if file_count >= max_train_files_per_animal_type:
+			break;
+
+		print(path + f)
+		img = cv2.imread(path + f)
+		
+		if (img is None) == False:
+
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+			all_train_files.append(image_type(1, flat_file))
+
+		else:
+			print("image read failure")
+
+
+
+
+
+def do_test_files(in_net):
+
+	path = 'test_set/cats/'
+	filenames = next(os.walk(path))[2]
+
+	cat_count = 0
+	total_count = 0
+
+	for f in filenames:
+
+		img = cv2.imread(path + f)
+			
+		if (img is None) == False:
+
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+
+		else:
+
+			print("image read failure")
+			continue
+
+		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+		batch[0] = torch.from_numpy(flat_file)
+		
+		x = Variable(batch)
+		x = x.to(torch.device(dev_string))
+
+		prediction = in_net(x)
+		prediction = prediction.to(torch.device(dev_string))
+
+	#	print(prediction)
+
+		if prediction[0][0] > 0.5:
+			cat_count = cat_count + 1
+
+		total_count = total_count + 1
+
+	print(cat_count / total_count)
+	print(total_count)
+
+
+
+
+
+	path = 'test_set/dogs/'
+	filenames = next(os.walk(path))[2]
+
+	dog_count = 0
+	total_count = 0
+
+	for f in filenames:
+
+		img = cv2.imread(path + f)
+			
+		if (img is None) == False:
+
+			img = img.astype(np.float32)
+			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
+			flat_file = res / 255.0
+			flat_file = np.transpose(flat_file, (2, 0, 1))
+
+		else:
+
+			print("image read failure")
+			continue
+
+		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+		batch[0] = torch.from_numpy(flat_file)
+		
+		x = Variable(batch)
+		x = x.to(torch.device(dev_string))
+
+		prediction = in_net(x)
+		prediction = prediction.to(torch.device(dev_string))
+
+	#	print(prediction)
+
+		if prediction[0][1] > 0.5:
+			dog_count = dog_count + 1
+
+		total_count = total_count + 1
+
+	print(dog_count / total_count)
+	print(total_count)
+
 
 
 
@@ -160,7 +303,9 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
 
-	
+		if ((epoch + 1) % 25 == 0):
+			do_test_files(net)
+
 	return net, loss
 
 
@@ -174,70 +319,10 @@ if False: #path.exists('weights_' + str(img_width) + '_' + str(num_epochs) + '.p
 else:
 	print("training...")
 
-
-
 	device = torch.device(dev_string)
 
-
-
 	all_train_files = []
-
-
-
-	file_count = 0
-	path = 'training_set/cats/'
-	filenames = next(os.walk(path))[2]
-
-	for f in filenames:
-
-		file_count = file_count + 1
-		if file_count >= max_train_files_per_animal_type:
-			break;
-
-		print(path + f)
-		img = cv2.imread(path + f)
-		
-		if (img is None) == False:
-
-			img = img.astype(np.float32)
-			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-			flat_file = res / 255.0
-			flat_file = np.transpose(flat_file, (2, 0, 1))
-			all_train_files.append(image_type(0, flat_file))
-
-		else:
-			print("image read failure")
-
-
-
-
-	file_count = 0
-	path = 'training_set/dogs/'
-	filenames = next(os.walk(path))[2]
-
-	for f in filenames:
-
-		file_count = file_count + 1
-		if file_count >= max_train_files_per_animal_type:
-			break;
-
-		print(path + f)
-		img = cv2.imread(path + f)
-		
-		if (img is None) == False:
-
-			img = img.astype(np.float32)
-			res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-			flat_file = res / 255.0
-			flat_file = np.transpose(flat_file, (2, 0, 1))
-			all_train_files.append(image_type(1, flat_file))
-
-		else:
-			print("image read failure")
-
-
-
-
+	do_train_files(all_train_files)
 
 	start = time.time()
 
@@ -261,96 +346,7 @@ else:
 
 	print(end - start)
 
-
-
-
-
 #	torch.save(net.state_dict(), 'weights_' + str(img_width) + '_' + str(num_epochs) + '.pth')
 
 
-
-path = 'test_set/cats/'
-filenames = next(os.walk(path))[2]
-
-cat_count = 0
-total_count = 0
-
-for f in filenames:
-
-	img = cv2.imread(path + f)
-			
-	if (img is None) == False:
-
-		img = img.astype(np.float32)
-		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = res / 255.0
-		flat_file = np.transpose(flat_file, (2, 0, 1))
-
-	else:
-
-		print("image read failure")
-		continue
-
-	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
-	batch[0] = torch.from_numpy(flat_file)
-		
-	x = Variable(batch)
-	x = x.to(torch.device(dev_string))
-
-	prediction = curr_net(x)
-	prediction = prediction.to(torch.device(dev_string))
-
-#	print(prediction)
-
-	if prediction[0][0] > 0.5:
-		cat_count = cat_count + 1
-
-	total_count = total_count + 1
-
-print(cat_count / total_count)
-print(total_count)
-
-
-
-
-
-path = 'test_set/dogs/'
-filenames = next(os.walk(path))[2]
-
-dog_count = 0
-total_count = 0
-
-for f in filenames:
-
-	img = cv2.imread(path + f)
-			
-	if (img is None) == False:
-
-		img = img.astype(np.float32)
-		res = cv2.resize(img, dsize=(img_width, img_width), interpolation=cv2.INTER_LINEAR)
-		flat_file = res / 255.0
-		flat_file = np.transpose(flat_file, (2, 0, 1))
-
-	else:
-
-		print("image read failure")
-		continue
-
-	batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
-	batch[0] = torch.from_numpy(flat_file)
-		
-	x = Variable(batch)
-	x = x.to(torch.device(dev_string))
-
-	prediction = curr_net(x)
-	prediction = prediction.to(torch.device(dev_string))
-
-#	print(prediction)
-
-	if prediction[0][1] > 0.5:
-		dog_count = dog_count + 1
-
-	total_count = total_count + 1
-
-print(dog_count / total_count)
-print(total_count)
+#do_test_files()
