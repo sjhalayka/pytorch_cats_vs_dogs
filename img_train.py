@@ -20,7 +20,7 @@ padding_width = round((kernel_width - 1) / 2)
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
 num_epochs = 200
-learning_rate = 0.0001 # test... was 0.001 before
+learning_rate = 0.0005 # test... was 0.001 before
 
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
@@ -137,7 +137,9 @@ def do_train_files(all_train_files):
 
 
 
-def do_test_files(in_net, file_handle, epoch, random_seed):
+def do_test_files(in_net, file_name, epoch, random_seed):
+
+	file_handle = open(file_name, 'a')
 
 	path = 'test_set/cats/'
 	filenames = next(os.walk(path))[2]
@@ -229,13 +231,13 @@ def do_test_files(in_net, file_handle, epoch, random_seed):
 	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(dog_count / total_count) + "\n")
-	file_handle.write(str(total_count) + "\n")
+	file_handle.write(str(total_count) + "\n\n")
 	print(str(random_seed))
 	print(str(epoch))
 	print(str(dog_count / total_count))
 	print(str(total_count))
 
-
+	file_handle.close()
 
 
 
@@ -259,7 +261,8 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	net.to(torch.device(dev_string))
 
-	file_handle = open('output.txt', 'w')
+	file_handle = open("output.txt", "w")
+	file_handle.close()
 
 	for epoch in range(num_epochs):
 
@@ -317,7 +320,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			optimizer.step()		# apply gradients
 
 		if ((epoch + 1) % 10 == 0):
-			do_test_files(net, file_handle, epoch + 1, random_seed)
+			do_test_files(net, "output.txt", epoch + 1, random_seed)
 
 	return net, loss
 
