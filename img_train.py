@@ -8,9 +8,12 @@ import os.path
 from os import path
 import time
 
+
+
+
 dev_string = "cuda:0" # "cpu"
 
-img_width = 384 # reduce this if running out of CPU RAM
+img_width = 400 # reduce this if running out of CPU RAM
 num_channels = 3 # RGB images
 kernel_width = 7 # an odd integer
 padding_width = round((kernel_width - 1) / 2) # an even integer
@@ -18,7 +21,7 @@ num_output_components = 2 # an integer representing the number of one-hot output
 
 num_epochs = 200
 learning_rate = 0.0001 # test... was 0.001 before
-	
+
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
@@ -134,8 +137,7 @@ def do_train_files(all_train_files):
 
 
 
-
-def do_test_files(in_net):
+def do_test_files(in_net, file_handle, epoch):
 
 	path = 'test_set/cats/'
 	filenames = next(os.walk(path))[2]
@@ -156,7 +158,7 @@ def do_test_files(in_net):
 
 		else:
 
-			print("image read failure")
+			#print("image read failure")
 			continue
 
 		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
@@ -175,8 +177,15 @@ def do_test_files(in_net):
 
 		total_count = total_count + 1
 
-	print(cat_count / total_count)
-	print(total_count)
+
+	file_handle.write(str(epoch) + "\n")
+	file_handle.write(str(cat_count / total_count) + "\n")
+	file_handle.write(str(total_count) + "\n")
+	print(str(epoch) + "\n")
+	print(str(cat_count / total_count) + "\n")
+	print(str(total_count) + "\n")
+#	print(cat_count / total_count)
+#	print(total_count)
 
 
 
@@ -201,7 +210,7 @@ def do_test_files(in_net):
 
 		else:
 
-			print("image read failure")
+			#print("image read failure")
 			continue
 
 		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
@@ -220,8 +229,15 @@ def do_test_files(in_net):
 
 		total_count = total_count + 1
 
-	print(dog_count / total_count)
-	print(total_count)
+
+	file_handle.write(str(epoch) + "\n")
+	file_handle.write(str(dog_count / total_count) + "\n")
+	file_handle.write(str(total_count) + "\n")
+	print(str(epoch) + "\n")
+	print(str(dog_count / total_count) + "\n")
+	print(str(total_count) + "\n")
+#	print(dog_count / total_count)
+#	print(total_count)
 
 
 
@@ -246,7 +262,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	net.to(torch.device(dev_string))
 
-
+	file_handle = open('output.txt', 'w')
 
 	for epoch in range(num_epochs):
 
@@ -303,8 +319,8 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
 
-		if ((epoch + 1) % 25 == 0):
-			do_test_files(net)
+		if ((epoch + 1) % 10 == 0):
+			do_test_files(net, file_handle, epoch + 1)
 
 	return net, loss
 
@@ -347,6 +363,3 @@ else:
 	print(end - start)
 
 #	torch.save(net.state_dict(), 'weights_' + str(img_width) + '_' + str(num_epochs) + '.pth')
-
-
-#do_test_files()
