@@ -16,7 +16,7 @@ dev_string = "cuda:0" # "cpu"
 img_width = 400 # reduce this if running out of CPU RAM
 num_channels = 3 # RGB images
 kernel_width = 7 # an odd integer
-padding_width = round((kernel_width - 1) / 2) # an even integer
+padding_width = round((kernel_width - 1) / 2)
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
 num_epochs = 200
