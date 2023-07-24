@@ -5,8 +5,7 @@ import random
 import torch
 from torch import flatten
 from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
+
 
 import os.path
 from os import path
@@ -19,17 +18,18 @@ dev_string = "cuda:0" # "cpu"
 
 
 
-img_width = 384
-num_channels = 3
-kernel_width_height = 3
-
-num_output_components = 2
+img_width = 400 # reduce this if running out of CPU RAM
+num_channels = 3 # RGB images
+kernel_width = 7 # an odd integer
+padding_width = round((kernel_width - 1) / 2) # an even integer
+num_output_components = 2 # an integer representing the number of one-hot outputs
 
 num_epochs = 100
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_length = 128 # reduce this if running out of GPU RAM
+train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
+
 num_recursions = 0
 num_child_networks = 0
 
@@ -40,26 +40,27 @@ class Net(torch.nn.Module):
 	def __init__(self, num_channels, num_output_components):
 	
 		super().__init__()
+
 		self.model = torch.nn.Sequential(
 
-		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 16, kernel_size = kernel_width_height), 
+		    torch.nn.Conv2d(in_channels = num_channels, out_channels = 16, kernel_size = kernel_width, stride = 1, padding = padding_width), 
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
+		    torch.nn.MaxPool2d(kernel_size = kernel_width),
   
-		    torch.nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = kernel_width_height),
+		    torch.nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = kernel_width, stride = 1, padding = padding_width),
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
+		    torch.nn.MaxPool2d(kernel_size = kernel_width),
 		      
-		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = kernel_width_height),
+		    torch.nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = kernel_width, stride = 1, padding = padding_width),
 		    torch.nn.ReLU(),
-		    torch.nn.MaxPool2d(kernel_size = kernel_width_height),
-  
+		    torch.nn.MaxPool2d(kernel_size = kernel_width),
+	
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(10816, 256),
+		    torch.nn.Linear(64, 16),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(256, num_output_components),
-			
-			torch.nn.Softmax(dim=1)
+		    torch.nn.Linear(16, num_output_components),
+
+			torch.nn.Softmax(dim = 1)
 		)
   
 	def forward(self, x):
@@ -110,7 +111,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 		curr_train_file = 0
 		train_files_remaining = len(all_train_files)
-		buffer_size = train_data_sliding_window_length # use a sliding window width that fits in 8GB of GPU RAM
+		buffer_size = train_data_sliding_window_length
 
 		while train_files_remaining > 0:
 
