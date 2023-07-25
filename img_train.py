@@ -20,7 +20,7 @@ padding_width = round((kernel_width - 1) / 2) # an integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
 num_epochs = 200
-learning_rate = 0.0005
+learning_rate = 0.0001
 
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
