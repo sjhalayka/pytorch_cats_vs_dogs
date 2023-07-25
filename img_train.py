@@ -11,22 +11,25 @@ import time
 
 
 
-dev_string = "cuda:0" # "cpu"
+dev_string = "cuda:0"
+#dev_string = "cpu"
+
+
 
 img_width = 400 # reduce this if running out of CPU RAM
-num_channels = 3 # RGB images
+num_channels = 3 # we're using RGB images
 kernel_width = 7 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
-num_epochs = 200
+num_epochs = 10
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
-num_recursions = 0
-num_child_networks = 0
+num_recursions = 10
+num_child_networks = 5
 
 
 
