@@ -25,12 +25,12 @@ num_output_components = 2 # an integer representing the number of one-hot output
 num_epochs = 10
 learning_rate = 0.001
 
-max_train_files_per_animal_type = 100
+max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
 num_recursions = 10
 num_child_networks = 5
-
+	
 
 
 class Net(torch.nn.Module):
@@ -109,8 +109,6 @@ def do_train_files(all_train_files):
 
 		else:
 			print("image read failure")
-
-
 
 
 	file_count = 0
@@ -193,7 +191,6 @@ def do_test_files(in_net, file_name, epoch, random_seed, num_recursion, num_chil
 	print(str(epoch))
 	print(str(cat_count / total_count))
 	print(str(total_count))
-
 
 
 	path = 'test_set/dogs/'
