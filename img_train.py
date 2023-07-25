@@ -138,9 +138,9 @@ def do_train_files(all_train_files):
 
 
 
-def do_test_files(in_net, file_name, epoch, random_seed, num_recursion, num_child_network):
+def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child_network):
 
-	file_handle = open(file_name, 'a')
+	file_handle = open(filename, 'a')
 
 	path = 'test_set/cats/'
 	filenames = next(os.walk(path))[2]
@@ -180,13 +180,13 @@ def do_test_files(in_net, file_name, epoch, random_seed, num_recursion, num_chil
 
 		total_count = total_count + 1
 
-	file_handle.write(str(num_recursion) + str(num_child_network))
+	file_handle.write(str(num_recursion) + " " + str(num_child_network))
 	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(cat_count / total_count) + "\n")
 	file_handle.write(str(total_count) + "\n")
 
-	print(str(num_recursion) + str(num_child_network))
+	print(str(num_recursion) + " " + str(num_child_network))
 	print(str(random_seed))
 	print(str(epoch))
 	print(str(cat_count / total_count))
@@ -231,13 +231,13 @@ def do_test_files(in_net, file_name, epoch, random_seed, num_recursion, num_chil
 
 		total_count = total_count + 1
 
-	file_handle.write(str(num_recursion) + str(num_child_network))
+	file_handle.write(str(num_recursion) + " " + str(num_child_network))
 	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(dog_count / total_count) + "\n")
 	file_handle.write(str(total_count) + "\n")
 
-	print(str(num_recursion) + str(num_child_network))
+	print(str(num_recursion) + " " + str(num_child_network))
 	print(str(random_seed))
 	print(str(epoch))
 	print(str(dog_count / total_count))
@@ -249,7 +249,7 @@ def do_test_files(in_net, file_name, epoch, random_seed, num_recursion, num_chil
 
 
 
-def do_network(in_net, num_channels, num_output_components, all_train_files, random_seed, num_epochs, num_recursions, num_child_networks):
+def do_network(in_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks):
 
 	if (in_net is None):
 		in_net = Net(num_channels, num_output_components)
@@ -267,8 +267,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 
 	net.to(torch.device(dev_string))
 
-	file_handle = open(str(random_seed) + ".txt", "w")
-	file_handle.close()
+
 
 	for epoch in range(num_epochs):
 
@@ -326,7 +325,7 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, ran
 			optimizer.step()		# apply gradients
 
 		if ((epoch + 1) % 10 == 0):
-			do_test_files(net, str(random_seed) + ".txt", epoch + 1, random_seed, num_recursions, num_child_networks)
+			do_test_files(net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
 
 	return net, loss
 
@@ -350,7 +349,12 @@ else:
 
 	start = time.time()
 
-	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, prng_seed, num_epochs, 0, 0)
+	filename = str(prng_seed) + ".txt"
+
+	file_handle = open(filename, "w")
+	file_handle.close()
+
+	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0)
 
 	for y in range(num_recursions):
 
@@ -360,7 +364,7 @@ else:
 
 			prng_seed = prng_seed + 1
 
-			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, prng_seed, num_epochs, y, x)
+			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x)
 
 			if loss < curr_loss:
 
