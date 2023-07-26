@@ -358,7 +358,7 @@ else:
 
 	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0)
 
-	torch.save(net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+	torch.save(curr_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 	for y in range(num_recursions):
 
@@ -375,7 +375,7 @@ else:
 				curr_loss = loss
 				curr_net = net
 
-				torch.save(net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+				torch.save(curr_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 
 	end = time.time()
