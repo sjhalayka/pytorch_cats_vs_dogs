@@ -180,7 +180,7 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 
 		total_count = total_count + 1
 
-	file_handle.write(str(num_recursion) + " " + str(num_child_network))
+	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
 	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(cat_count / total_count) + "\n")
@@ -231,17 +231,19 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 
 		total_count = total_count + 1
 
-	file_handle.write(str(num_recursion) + " " + str(num_child_network))
+	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
 	file_handle.write(str(random_seed) + "\n")
 	file_handle.write(str(epoch) + "\n")
 	file_handle.write(str(dog_count / total_count) + "\n")
 	file_handle.write(str(total_count) + "\n")
+	file_handle.write("\n")
 
 	print(str(num_recursion) + " " + str(num_child_network))
 	print(str(random_seed))
 	print(str(epoch))
 	print(str(dog_count / total_count))
 	print(str(total_count))
+	print("")
 
 	file_handle.close()
 
@@ -356,6 +358,8 @@ else:
 
 	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0)
 
+	torch.save(net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+
 	for y in range(num_recursions):
 
 		for x in range(num_child_networks):
@@ -370,6 +374,8 @@ else:
 
 				curr_loss = loss
 				curr_net = net
+
+				torch.save(net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 
 	end = time.time()
