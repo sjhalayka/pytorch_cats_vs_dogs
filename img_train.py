@@ -382,7 +382,7 @@ else:
 
 		for x in range(num_child_networks):
 			nets.append(curr_net)
-			thread_ret_vals.append(net_loss(Net(num_channels, num_output_components), curr_loss))
+			thread_ret_vals.append(net_loss(Net(num_channels, num_output_components), 0))
 
 		# make a duplicate using a new address
 		new_nets = nets[:]
@@ -392,7 +392,7 @@ else:
 
 			prng_seed = prng_seed + 1
 
-			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals,x))
+			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals, x))
 			threads.append(t)
 			threads[x].start()
 
@@ -409,6 +409,7 @@ else:
 				curr_net = temp_net
 
 				print("BETTER NETWORK FOUND")
+				print(str(temp_loss) + " " + str(curr_loss))
 
 			else:
 
