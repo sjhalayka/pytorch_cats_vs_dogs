@@ -10,7 +10,7 @@ import os
 import time
 import threading
 from threading import Lock
-
+import copy
 
 dev_string = "cuda:0"
 #dev_string = "cpu"
@@ -23,7 +23,7 @@ kernel_width = 7 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
-num_epochs = 1
+num_epochs = 10
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100
@@ -328,6 +328,7 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 
 		if ((epoch + 1) % 10 == 0):
 			with lock:
+				print("Running test files")
 				do_test_files(in_net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
 
 	
@@ -377,45 +378,26 @@ else:
 	for y in range(num_recursions):
 
 		threads = []
-		nets = []
 		thread_ret_vals = []
 
 		for x in range(num_child_networks):
-			nets.append(curr_net)
+
 			thread_ret_vals.append(net_loss(Net(num_channels, num_output_components), 0))
-
-		# make a duplicate using a new address
-		new_nets = nets[:]
-		new_ret_vals = thread_ret_vals[:]
-
-		for x in range(num_child_networks):
 
 			prng_seed = prng_seed + 1
 
-			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals, x))
+			# use a new copy of curr_net, since we can't pass by value in Python
+			t = threading.Thread(target=do_network, args=(lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, thread_ret_vals, x))
 			threads.append(t)
 			threads[x].start()
 
 		for x in range(num_child_networks):
+			
 			threads[x].join()
 
-		for x in range(num_child_networks):
-
-			temp_net = new_ret_vals[x].in_net
-			temp_loss = new_ret_vals[x].in_loss
-
-			if temp_loss < curr_loss:
-				curr_loss = temp_loss
-				curr_net = temp_net
-
-				print("BETTER NETWORK FOUND")
-				print(str(temp_loss) + " " + str(curr_loss))
-
-			else:
-
-				print("NOT BETTER")
-				print(str(temp_loss) + " " + str(curr_loss))
-			
+			if thread_ret_vals[x].in_loss < curr_loss:
+				curr_loss = thread_ret_vals[x].in_loss
+				curr_net = thread_ret_vals[x].in_net
 
 
 	end = time.time()
