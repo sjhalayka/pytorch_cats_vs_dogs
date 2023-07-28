@@ -6,9 +6,10 @@ import torch
 from torch.autograd import Variable
 import os.path
 from os import path
+import os
 import time
-
-
+import threading
+from threading import Lock
 
 
 dev_string = "cuda:0"
@@ -22,15 +23,15 @@ kernel_width = 7 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
-num_epochs = 10
+num_epochs = 1
 learning_rate = 0.001
 
-max_train_files_per_animal_type = 100000
+max_train_files_per_animal_type = 100
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
 num_recursions = 10
 num_child_networks = 5
-	
+
 
 
 class Net(torch.nn.Module):
@@ -249,27 +250,25 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 
 
 
+class net_loss:
+
+	def __init__(self, in_net, in_loss):
+		self.in_net = in_net
+		self.in_loss = in_loss
 
 
-def do_network(in_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks):
+def do_network(lock, input_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks, ret_val):
+	
+	in_net = input_net
 
-	if (in_net is None):
-		in_net = Net(num_channels, num_output_components)
-
-	net = in_net
-
-
+	optimizer = torch.optim.Adam(in_net.parameters(), lr = learning_rate)
+	loss_func = torch.nn.MSELoss()
 
 	random.seed(random_seed)
 
-	optimizer = torch.optim.Adam(net.parameters(), lr = learning_rate)
-	loss_func = torch.nn.MSELoss()
+	loss = 0
 
-	loss = 0;
-
-	net.to(torch.device(dev_string))
-
-
+	in_net.to(torch.device(dev_string))
 
 	for epoch in range(num_epochs):
 
@@ -315,32 +314,36 @@ def do_network(in_net, num_channels, num_output_components, all_train_files, fil
 			x = x.to(torch.device(dev_string))
 			y = y.to(torch.device(dev_string))
 
-			prediction = net(x)
+			prediction = in_net(x)
 			prediction = prediction.to(torch.device(dev_string))
 
 			loss = loss_func(prediction, y)
 			
-			print(num_recursions, num_child_networks, train_files_remaining, epoch, loss)
+			with lock:
+				print(num_recursions, num_child_networks, train_files_remaining, epoch, loss)
 
 			optimizer.zero_grad()	 # clear gradients for next train
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
 
 		if ((epoch + 1) % 10 == 0):
-			do_test_files(net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
+			with lock:
+				do_test_files(in_net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
 
-	return net, loss
-
-
-
-
+	
+	ret_val = net_loss(in_net, loss)
 
 
-if False: #path.exists('weights_' + str(img_width) + '_' + str(num_epochs) + '.pth'):
-	net.load_state_dict(torch.load('weights_' + str(img_width) + '_' + str(num_epochs) + '.pth'))
-	print("loaded file successfully")
+
+
+
+
+
+if False: #path.exists('weights_' + str(prng_seed) + '.pth'):
+	net.load_state_dict(torch.load('weights_' + str(prng_seed) + '.pth'))
+	print("Loaded file successfully")
 else:
-	print("training...")
+	print("Training...")
 
 	device = torch.device(dev_string)
 
@@ -349,37 +352,63 @@ else:
 
 	prng_seed = round(time.time()*1000)
 
-	start = time.time()
-
 	filename = str(prng_seed) + ".txt"
-
+	
+	# Wipe the file if necessary
 	file_handle = open(filename, "w")
 	file_handle.close()
 
-	curr_net, curr_loss = do_network(None, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0)
+	start = time.time()
 
-	torch.save(curr_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+	lock = Lock()
+
+	seed_net = Net(num_channels, num_output_components)
+
+	ret_val = net_loss(seed_net, 0)
+
+	do_network(lock, seed_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0, ret_val)
+
+	curr_net = ret_val.in_net
+	curr_loss = ret_val.in_loss
+
+	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 	for y in range(num_recursions):
 
-		for x in range(num_child_networks):
+		threads = []
+		nets = []
 
-			print(y, num_recursions, x, num_child_networks)
+		for x in range(num_child_networks):
+			nets.append(curr_net)
+
+		# make a duplicate using a new address
+		new_nets = nets[:]
+
+		for x in range(num_child_networks):
 
 			prng_seed = prng_seed + 1
 
-			net, loss = do_network(curr_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x)
+			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, ret_val,))
+			threads.append(t)
+			threads[x].start()
 
-			if loss < curr_loss:
+		for x in range(num_child_networks):
 
-				curr_loss = loss
-				curr_net = net
+			threads[x].join()
 
-				torch.save(curr_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+			temp_net = ret_val.in_net
+			temp_loss = ret_val.in_loss
+
+			if temp_loss < curr_loss:
+				curr_loss = temp_loss
+				curr_net = temp_net
+
+				print("BETTER NETWORK FOUND")
+
+
+			
 
 
 	end = time.time()
 
 	print(end - start)
-
-#	torch.save(net.state_dict(), 'weights_' + str(img_width) + '_' + str(num_epochs) + '.pth')
