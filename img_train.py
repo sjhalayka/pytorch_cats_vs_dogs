@@ -377,18 +377,21 @@ else:
 
 		threads = []
 		nets = []
+		ret_vals = []
 
 		for x in range(num_child_networks):
 			nets.append(curr_net)
+			ret_vals.append(net_loss(curr_net, curr_loss))
 
 		# make a duplicate using a new address
 		new_nets = nets[:]
+		new_ret_vals = ret_vals[:]
 
 		for x in range(num_child_networks):
 
 			prng_seed = prng_seed + 1
 
-			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, ret_val,))
+			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals[x],))
 			threads.append(t)
 			threads[x].start()
 
@@ -396,8 +399,8 @@ else:
 
 			threads[x].join()
 
-			temp_net = ret_val.in_net
-			temp_loss = ret_val.in_loss
+			temp_net = new_ret_vals[x].in_net
+			temp_loss = new_ret_vals[x].in_loss
 
 			if temp_loss < curr_loss:
 				curr_loss = temp_loss
