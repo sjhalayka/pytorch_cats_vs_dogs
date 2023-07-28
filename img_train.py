@@ -387,8 +387,7 @@ else:
 			prng_seed = prng_seed + 1
 
 			# use a new copy of curr_net, since we can't pass by value in Python
-			t = threading.Thread(target=do_network, args=(lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, thread_ret_vals, x))
-			threads.append(t)
+			threads.append(threading.Thread(target = do_network, args = (lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, thread_ret_vals, x)))
 			threads[x].start()
 
 		for x in range(num_child_networks):
