@@ -257,7 +257,7 @@ class net_loss:
 		self.in_loss = in_loss
 
 
-def do_network(lock, input_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks, ret_val):
+def do_network(lock, input_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks, ret_vals, index):
 	
 	in_net = input_net
 
@@ -331,7 +331,7 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 				do_test_files(in_net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
 
 	
-	ret_val = net_loss(in_net, loss)
+	ret_vals[index] = net_loss(in_net, loss)
 
 
 
@@ -364,12 +364,13 @@ else:
 
 	seed_net = Net(num_channels, num_output_components)
 
-	ret_val = net_loss(seed_net, 0)
+	ret_vals = []
+	ret_vals.append(net_loss(seed_net, 0))
 
-	do_network(lock, seed_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0, ret_val)
+	do_network(lock, seed_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0, ret_vals, 0)
 
-	curr_net = ret_val.in_net
-	curr_loss = ret_val.in_loss
+	curr_net = ret_vals[0].in_net
+	curr_loss = ret_vals[0].in_loss
 
 	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
@@ -377,27 +378,28 @@ else:
 
 		threads = []
 		nets = []
-		ret_vals = []
+		thread_ret_vals = []
 
 		for x in range(num_child_networks):
 			nets.append(curr_net)
-			ret_vals.append(net_loss(curr_net, curr_loss))
+			thread_ret_vals.append(net_loss(Net(num_channels, num_output_components), curr_loss))
 
 		# make a duplicate using a new address
 		new_nets = nets[:]
-		new_ret_vals = ret_vals[:]
+		new_ret_vals = thread_ret_vals[:]
 
 		for x in range(num_child_networks):
 
 			prng_seed = prng_seed + 1
 
-			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals[x],))
+			t = threading.Thread(target=do_network, args=(lock, new_nets[x], num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, new_ret_vals,x))
 			threads.append(t)
 			threads[x].start()
 
 		for x in range(num_child_networks):
-
 			threads[x].join()
+
+		for x in range(num_child_networks):
 
 			temp_net = new_ret_vals[x].in_net
 			temp_loss = new_ret_vals[x].in_loss
@@ -408,7 +410,10 @@ else:
 
 				print("BETTER NETWORK FOUND")
 
+			else:
 
+				print("NOT BETTER")
+				print(str(temp_loss) + " " + str(curr_loss))
 			
 
 
