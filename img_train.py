@@ -17,6 +17,8 @@ dev_string = "cpu"
 
 
 
+
+
 img_width = 32 # reduce this if running out of CPU RAM
 num_channels = 3 # we're using RGB images
 kernel_width = 3 # an odd integer bigger than or equal to 3
