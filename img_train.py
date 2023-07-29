@@ -12,25 +12,25 @@ import threading
 from threading import Lock
 import copy
 
-dev_string = "cuda:0"
-#dev_string = "cpu"
+#dev_string = "cuda:0"
+dev_string = "cpu"
 
 
 
-img_width = 400 # reduce this if running out of CPU RAM
+img_width = 32 # reduce this if running out of CPU RAM
 num_channels = 3 # we're using RGB images
-kernel_width = 7 # an odd integer bigger than or equal to 3
+kernel_width = 3 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
 num_output_components = 2 # an integer representing the number of one-hot outputs
 
-num_epochs = 10
+num_epochs = 1
 learning_rate = 0.001
 
-max_train_files_per_animal_type = 100
+max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
 num_recursions = 10
-num_child_networks = 5
+num_child_networks = 10
 
 
 
@@ -139,7 +139,7 @@ def do_train_files(all_train_files):
 
 
 
-def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child_network):
+def do_test_files(in_net, filename, random_seed, num_recursion, num_child_network):
 
 	file_handle = open(filename, 'a')
 
@@ -147,7 +147,15 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 	filenames = next(os.walk(path))[2]
 
 	cat_count = 0
-	total_count = 0
+
+	image_count = 0
+
+	for f in filenames:
+		image_count = image_count + 1
+
+	batch = torch.zeros((image_count, num_channels, img_width, img_width), dtype=torch.float32)
+
+	index = 0
 
 	for f in filenames:
 
@@ -160,45 +168,49 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 			flat_file = res / 255.0
 			flat_file = np.transpose(flat_file, (2, 0, 1))
 
-		else:
-
-			#print("image read failure")
-			continue
-
-		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
-		batch[0] = torch.from_numpy(flat_file)
+			batch[index] = torch.from_numpy(flat_file)
 		
-		x = Variable(batch)
-		x = x.to(torch.device(dev_string))
+		index = index + 1
 
-		prediction = in_net(x)
-		prediction = prediction.to(torch.device(dev_string))
+	x = Variable(batch)
+	x = x.to(torch.device(dev_string))
+
+	prediction = in_net(x)
+	prediction = prediction.to(torch.device(dev_string))
 
 	#	print(prediction)
 
-		if prediction[0][0] > 0.5:
+	for i in range(image_count):
+		if prediction[i][0] > 0.5:
 			cat_count = cat_count + 1
-
-		total_count = total_count + 1
 
 	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
 	file_handle.write(str(random_seed) + "\n")
-	file_handle.write(str(epoch) + "\n")
-	file_handle.write(str(cat_count / total_count) + "\n")
-	file_handle.write(str(total_count) + "\n")
+	file_handle.write(str(cat_count / image_count) + "\n")
+	file_handle.write(str(image_count) + "\n")
 
 	print(str(num_recursion) + " " + str(num_child_network))
 	print(str(random_seed))
-	print(str(epoch))
-	print(str(cat_count / total_count))
-	print(str(total_count))
+	print(str(cat_count / image_count))
+	print(str(image_count))
+
+
+
 
 
 	path = 'test_set/dogs/'
 	filenames = next(os.walk(path))[2]
 
 	dog_count = 0
-	total_count = 0
+
+	image_count = 0
+
+	for f in filenames:
+		image_count = image_count + 1
+
+	batch = torch.zeros((image_count, num_channels, img_width, img_width), dtype=torch.float32)
+
+	index = 0
 
 	for f in filenames:
 
@@ -211,40 +223,32 @@ def do_test_files(in_net, filename, epoch, random_seed, num_recursion, num_child
 			flat_file = res / 255.0
 			flat_file = np.transpose(flat_file, (2, 0, 1))
 
-		else:
-
-			#print("image read failure")
-			continue
-
-		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
-		batch[0] = torch.from_numpy(flat_file)
+			batch[index] = torch.from_numpy(flat_file)
 		
-		x = Variable(batch)
-		x = x.to(torch.device(dev_string))
+		index = index + 1
 
-		prediction = in_net(x)
-		prediction = prediction.to(torch.device(dev_string))
+	x = Variable(batch)
+	x = x.to(torch.device(dev_string))
+
+	prediction = in_net(x)
+	prediction = prediction.to(torch.device(dev_string))
 
 	#	print(prediction)
 
-		if prediction[0][1] > 0.5:
+	for i in range(image_count):
+		if prediction[i][1] > 0.5:
 			dog_count = dog_count + 1
-
-		total_count = total_count + 1
 
 	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
 	file_handle.write(str(random_seed) + "\n")
-	file_handle.write(str(epoch) + "\n")
-	file_handle.write(str(dog_count / total_count) + "\n")
-	file_handle.write(str(total_count) + "\n")
-	file_handle.write("\n")
+	file_handle.write(str(dog_count / image_count) + "\n")
+	file_handle.write(str(image_count) + "\n")
 
 	print(str(num_recursion) + " " + str(num_child_network))
 	print(str(random_seed))
-	print(str(epoch))
-	print(str(dog_count / total_count))
-	print(str(total_count))
-	print("")
+	print(str(dog_count / image_count))
+	print(str(image_count))
+
 
 	file_handle.close()
 
@@ -257,18 +261,17 @@ class net_loss:
 		self.in_loss = in_loss
 
 
+
 def do_network(lock, input_net, num_channels, num_output_components, all_train_files, filename, random_seed, num_epochs, num_recursions, num_child_networks, ret_vals, index):
 	
-	in_net = input_net
-
-	optimizer = torch.optim.Adam(in_net.parameters(), lr = learning_rate)
+	optimizer = torch.optim.Adam(input_net.parameters(), lr = learning_rate)
 	loss_func = torch.nn.MSELoss()
 
 	random.seed(random_seed)
 
 	loss = 0
 
-	in_net.to(torch.device(dev_string))
+	input_net.to(torch.device(dev_string))
 
 	for epoch in range(num_epochs):
 
@@ -314,7 +317,7 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 			x = x.to(torch.device(dev_string))
 			y = y.to(torch.device(dev_string))
 
-			prediction = in_net(x)
+			prediction = input_net(x)
 			prediction = prediction.to(torch.device(dev_string))
 
 			loss = loss_func(prediction, y)
@@ -326,13 +329,12 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
 
-		if ((epoch + 1) % 10 == 0):
-			with lock:
-				print("Running test files")
-				do_test_files(in_net, filename, epoch + 1, random_seed, num_recursions, num_child_networks)
-
 	
-	ret_vals[index] = net_loss(in_net, loss)
+	with lock:
+		print("Running test files")
+		do_test_files(input_net, filename, random_seed, num_recursions, num_child_networks)
+	
+	ret_vals[index] = net_loss(input_net, loss)
 
 
 
@@ -395,6 +397,7 @@ else:
 			threads[x].join()
 
 			if thread_ret_vals[x].in_loss < curr_loss:
+				print("Found better loss")
 				curr_loss = thread_ret_vals[x].in_loss
 				curr_net = thread_ret_vals[x].in_net
 
