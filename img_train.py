@@ -35,7 +35,7 @@ learning_rate = 0.001
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of CPU and/or GPU RAM
 
-num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
+num_recursions = 1 # set this to zero to skip doing refinement using adversarial networks
 num_child_networks = 10 # number of threads to launch per adversarial round
 
 
@@ -315,11 +315,13 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 
 			with lock:
 
+				print(num_recursions, num_child_networks, train_files_remaining, epoch, loss)
+
 				# keep CUDA happy by locking before running the network
 				prediction = input_net(x)
-				prediction = prediction.to(torch.device(dev_string))
-				loss = loss_func(prediction, y)
-				print(num_recursions, num_child_networks, train_files_remaining, epoch, loss)
+
+			prediction = prediction.to(torch.device(dev_string))
+			loss = loss_func(prediction, y)
 
 			optimizer.zero_grad()	 # clear gradients for next train
 			loss.backward()		 # backpropagation, compute gradients
@@ -370,6 +372,8 @@ else:
 
 #	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
+	recursion_start = time.time()
+
 	for y in range(num_recursions):
 
 		threads = []
@@ -381,7 +385,7 @@ else:
 
 			prng_seed = prng_seed + 1
 
-			# use a new copy of curr_net, since we can't pass by value in Python
+			# use a new deep copy of curr_net, since we can't pass by value in Python
 			threads.append(threading.Thread(target = do_network, args = (lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, thread_ret_vals, x)))
 			threads[x].start()
 
@@ -390,14 +394,15 @@ else:
 			threads[x].join()
 
 			if thread_ret_vals[x].in_loss < curr_loss:
-				print("Found better loss")
+
 				curr_loss = thread_ret_vals[x].in_loss
 				curr_net = thread_ret_vals[x].in_net
 
 
 	end = time.time()
 
-	print(end - start)
+	print("Total time     ", end - start)
+	print("Recursion time ", end - recursion_start)
 
 	print("Running test files")
 	do_test_files(curr_net, filename)
