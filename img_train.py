@@ -19,7 +19,7 @@ dev_string = "cpu"
 
 
 
-img_width = 32 # reduce this if running out of CPU RAM
+img_width = 128 # reduce this if running out of CPU RAM
 num_channels = 3 # we're using RGB images
 kernel_width = 3 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
@@ -31,8 +31,8 @@ learning_rate = 0.001
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
 
-num_recursions = 10
-num_child_networks = 10
+num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
+num_child_networks = 10 # number of threads to launch per adversarial round
 
 
 
@@ -57,9 +57,9 @@ class Net(torch.nn.Module):
 		    torch.nn.MaxPool2d(kernel_size = kernel_width),
 	
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(64, 16),
+		    torch.nn.Linear(1024, 128),
 		    torch.nn.ReLU(),
-		    torch.nn.Linear(16, num_output_components),
+		    torch.nn.Linear(128, num_output_components),
 
 			torch.nn.Softmax(dim = 1)
 		)
@@ -141,7 +141,7 @@ def do_train_files(all_train_files):
 
 
 
-def do_test_files(in_net, filename, random_seed, num_recursion, num_child_network):
+def do_test_files(in_net, filename):
 
 	file_handle = open(filename, 'a')
 
@@ -186,13 +186,9 @@ def do_test_files(in_net, filename, random_seed, num_recursion, num_child_networ
 		if prediction[i][0] > 0.5:
 			cat_count = cat_count + 1
 
-	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
-	file_handle.write(str(random_seed) + "\n")
+
 	file_handle.write(str(cat_count / image_count) + "\n")
 	file_handle.write(str(image_count) + "\n")
-
-	print(str(num_recursion) + " " + str(num_child_network))
-	print(str(random_seed))
 	print(str(cat_count / image_count))
 	print(str(image_count))
 
@@ -241,18 +237,12 @@ def do_test_files(in_net, filename, random_seed, num_recursion, num_child_networ
 		if prediction[i][1] > 0.5:
 			dog_count = dog_count + 1
 
-	file_handle.write(str(num_recursion) + " " + str(num_child_network) + "\n")
-	file_handle.write(str(random_seed) + "\n")
+
 	file_handle.write(str(dog_count / image_count) + "\n")
 	file_handle.write(str(image_count) + "\n")
-
-	print(str(num_recursion) + " " + str(num_child_network))
-	print(str(random_seed))
+	file_handle.close()
 	print(str(dog_count / image_count))
 	print(str(image_count))
-
-
-	file_handle.close()
 
 
 
@@ -331,10 +321,7 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 			loss.backward()		 # backpropagation, compute gradients
 			optimizer.step()		# apply gradients
 
-	
-	with lock:
-		print("Running test files")
-		do_test_files(input_net, filename, random_seed, num_recursions, num_child_networks)
+
 	
 	ret_vals[index] = net_loss(input_net, loss)
 
@@ -407,3 +394,6 @@ else:
 	end = time.time()
 
 	print(end - start)
+
+	print("Running test files")
+	do_test_files(curr_net, filename)
