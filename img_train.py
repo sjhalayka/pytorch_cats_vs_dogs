@@ -12,8 +12,12 @@ import threading
 from threading import Lock
 import copy
 
-#dev_string = "cuda:0"
-dev_string = "cpu"
+
+
+
+
+dev_string = "cuda:0"
+#dev_string = "cpu"
 
 
 
@@ -29,7 +33,7 @@ num_epochs = 1
 learning_rate = 0.001
 
 max_train_files_per_animal_type = 100000
-train_data_sliding_window_length = 64 # reduce this if running out of GPU RAM
+train_data_sliding_window_length = 64 # reduce this if running out of CPU and/or GPU RAM
 
 num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
 num_child_networks = 10 # number of threads to launch per adversarial round
@@ -309,12 +313,12 @@ def do_network(lock, input_net, num_channels, num_output_components, all_train_f
 			x = x.to(torch.device(dev_string))
 			y = y.to(torch.device(dev_string))
 
-			prediction = input_net(x)
-			prediction = prediction.to(torch.device(dev_string))
-
-			loss = loss_func(prediction, y)
-			
 			with lock:
+
+				# keep CUDA happy by locking before running the network
+				prediction = input_net(x)
+				prediction = prediction.to(torch.device(dev_string))
+				loss = loss_func(prediction, y)
 				print(num_recursions, num_child_networks, train_files_remaining, epoch, loss)
 
 			optimizer.zero_grad()	 # clear gradients for next train
@@ -364,7 +368,7 @@ else:
 	curr_net = ret_vals[0].in_net
 	curr_loss = ret_vals[0].in_loss
 
-	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+#	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 	for y in range(num_recursions):
 
