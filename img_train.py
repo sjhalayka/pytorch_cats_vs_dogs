@@ -35,7 +35,7 @@ learning_rate = 0.001
 max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of CPU and/or GPU RAM
 
-num_recursions = 1 # set this to zero to skip doing refinement using adversarial networks
+num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
 num_child_networks = 10 # number of threads to launch per adversarial round
 
 
@@ -348,8 +348,6 @@ else:
 	all_train_files = []
 	do_train_files(all_train_files)
 
-	prng_seed = round(time.time()*1000)
-
 	filename = str(prng_seed) + ".txt"
 	
 	# Wipe the file if necessary
@@ -365,12 +363,14 @@ else:
 	ret_vals = []
 	ret_vals.append(net_loss(seed_net, 0))
 
+	prng_seed = round(time.time()*1000)
+
 	do_network(lock, seed_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0, ret_vals, 0)
 
 	curr_net = ret_vals[0].in_net
 	curr_loss = ret_vals[0].in_loss
 
-#	torch.save(seed_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
+#	torch.save(curr_net.state_dict(), 'weights_' + str(prng_seed) + '.pth')
 
 	recursion_start = time.time()
 
@@ -378,15 +378,17 @@ else:
 
 		threads = []
 		thread_ret_vals = []
+		prng_seeds = []
 
 		for x in range(num_child_networks):
 
 			thread_ret_vals.append(net_loss(Net(num_channels, num_output_components), 0))
 
 			prng_seed = prng_seed + 1
+			prng_seeds.append(prng_seed)
 
 			# use a new deep copy of curr_net, since we can't pass by value in Python
-			threads.append(threading.Thread(target = do_network, args = (lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, y, x, thread_ret_vals, x)))
+			threads.append(threading.Thread(target = do_network, args = (lock, copy.deepcopy(curr_net), num_channels, num_output_components, all_train_files, filename, prng_seeds[x], num_epochs, y, x, thread_ret_vals, x)))
 			threads[x].start()
 
 		for x in range(num_child_networks):
@@ -397,6 +399,8 @@ else:
 
 				curr_loss = thread_ret_vals[x].in_loss
 				curr_net = thread_ret_vals[x].in_net
+
+				#torch.save(curr_net.state_dict(), 'weights_' + str(prng_seeds[x]) + '.pth')
 
 
 	end = time.time()
