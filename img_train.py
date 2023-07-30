@@ -348,6 +348,8 @@ else:
 	all_train_files = []
 	do_train_files(all_train_files)
 
+	prng_seed = round(time.time()*1000)
+
 	filename = str(prng_seed) + ".txt"
 	
 	# Wipe the file if necessary
@@ -362,8 +364,6 @@ else:
 
 	ret_vals = []
 	ret_vals.append(net_loss(seed_net, 0))
-
-	prng_seed = round(time.time()*1000)
 
 	do_network(lock, seed_net, num_channels, num_output_components, all_train_files, filename, prng_seed, num_epochs, 0, 0, ret_vals, 0)
 
