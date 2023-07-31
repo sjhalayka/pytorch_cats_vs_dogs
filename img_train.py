@@ -32,7 +32,7 @@ num_output_components = 2 # an integer representing the number of one-hot output
 num_epochs = 1
 learning_rate = 0.001
 
-max_train_files_per_animal_type = 100
+max_train_files_per_animal_type = 100000
 train_data_sliding_window_length = 64 # reduce this if running out of CPU and/or GPU RAM
 
 num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
