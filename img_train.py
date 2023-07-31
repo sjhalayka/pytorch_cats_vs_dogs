@@ -23,7 +23,7 @@ dev_string = "cuda:0"
 
 
 
-img_width = 128 # reduce this if running out of CPU RAM
+img_width = 400 # reduce this if running out of CPU RAM
 num_channels = 3 # we're using RGB images
 kernel_width = 3 # an odd integer bigger than or equal to 3
 padding_width = round((kernel_width - 1) / 2) # an integer
@@ -32,7 +32,7 @@ num_output_components = 2 # an integer representing the number of one-hot output
 num_epochs = 1
 learning_rate = 0.001
 
-max_train_files_per_animal_type = 100000
+max_train_files_per_animal_type = 100
 train_data_sliding_window_length = 64 # reduce this if running out of CPU and/or GPU RAM
 
 num_recursions = 10 # set this to zero to skip doing refinement using adversarial networks
@@ -61,7 +61,7 @@ class Net(torch.nn.Module):
 		    torch.nn.MaxPool2d(kernel_size = kernel_width),
 	
 		    torch.nn.Flatten(),
-		    torch.nn.Linear(1024, 128),
+		    torch.nn.Linear(12544, 128),
 		    torch.nn.ReLU(),
 		    torch.nn.Linear(128, num_output_components),
 
@@ -144,7 +144,6 @@ def do_train_files(all_train_files):
 
 
 
-
 def do_test_files(in_net, filename):
 
 	file_handle = open(filename, 'a')
@@ -153,15 +152,7 @@ def do_test_files(in_net, filename):
 	filenames = next(os.walk(path))[2]
 
 	cat_count = 0
-
-	image_count = 0
-
-	for f in filenames:
-		image_count = image_count + 1
-
-	batch = torch.zeros((image_count, num_channels, img_width, img_width), dtype=torch.float32)
-
-	index = 0
+	total_count = 0
 
 	for f in filenames:
 
@@ -174,45 +165,38 @@ def do_test_files(in_net, filename):
 			flat_file = res / 255.0
 			flat_file = np.transpose(flat_file, (2, 0, 1))
 
-			batch[index] = torch.from_numpy(flat_file)
+		else:
+
+			#print("image read failure")
+			continue
+
+		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+		batch[0] = torch.from_numpy(flat_file)
 		
-		index = index + 1
+		x = Variable(batch)
+		x = x.to(torch.device(dev_string))
 
-	x = Variable(batch)
-	x = x.to(torch.device(dev_string))
-
-	prediction = in_net(x)
-	prediction = prediction.to(torch.device(dev_string))
+		prediction = in_net(x)
+		prediction = prediction.to(torch.device(dev_string))
 
 	#	print(prediction)
 
-	for i in range(image_count):
-		if prediction[i][0] > 0.5:
+		if prediction[0][0] > 0.5:
 			cat_count = cat_count + 1
 
+		total_count = total_count + 1
 
-	file_handle.write(str(cat_count / image_count) + "\n")
-	file_handle.write(str(image_count) + "\n")
-	print(str(cat_count / image_count))
-	print(str(image_count))
-
-
-
+	file_handle.write(str(cat_count / total_count) + "\n")
+	file_handle.write(str(total_count) + "\n")
+	print(str(cat_count / total_count))
+	print(str(total_count))
 
 
 	path = 'test_set/dogs/'
 	filenames = next(os.walk(path))[2]
 
 	dog_count = 0
-
-	image_count = 0
-
-	for f in filenames:
-		image_count = image_count + 1
-
-	batch = torch.zeros((image_count, num_channels, img_width, img_width), dtype=torch.float32)
-
-	index = 0
+	total_count = 0
 
 	for f in filenames:
 
@@ -225,28 +209,35 @@ def do_test_files(in_net, filename):
 			flat_file = res / 255.0
 			flat_file = np.transpose(flat_file, (2, 0, 1))
 
-			batch[index] = torch.from_numpy(flat_file)
+		else:
+
+			#print("image read failure")
+			continue
+
+		batch = torch.zeros((1, num_channels, img_width, img_width), dtype=torch.float32)
+		batch[0] = torch.from_numpy(flat_file)
 		
-		index = index + 1
+		x = Variable(batch)
+		x = x.to(torch.device(dev_string))
 
-	x = Variable(batch)
-	x = x.to(torch.device(dev_string))
-
-	prediction = in_net(x)
-	prediction = prediction.to(torch.device(dev_string))
+		prediction = in_net(x)
+		prediction = prediction.to(torch.device(dev_string))
 
 	#	print(prediction)
 
-	for i in range(image_count):
-		if prediction[i][1] > 0.5:
+		if prediction[0][1] > 0.5:
 			dog_count = dog_count + 1
 
+		total_count = total_count + 1
 
-	file_handle.write(str(dog_count / image_count) + "\n")
-	file_handle.write(str(image_count) + "\n")
+	file_handle.write(str(dog_count / total_count) + "\n")
+	file_handle.write(str(total_count) + "\n")
+	file_handle.write("\n")
+	print(str(dog_count / total_count))
+	print(str(total_count))
+	print("")
+
 	file_handle.close()
-	print(str(dog_count / image_count))
-	print(str(image_count))
 
 
 
